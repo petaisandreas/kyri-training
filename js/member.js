@@ -249,3 +249,6 @@ function mount(s) {
 
 subscribe(render);
 render();
+
+// Installable web app: register the offline-capable service worker.
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

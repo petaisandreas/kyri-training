@@ -27,6 +27,13 @@ Athletes sign in with their email and password and can:
 
 Demo login: press **"Fill it in for me"** on the sign-in screen (every seeded athlete's password is `train123`).
 
+## Install on a phone
+Both apps can be installed as home-screen apps. They open full screen, have their own icon, and still open offline.
+- **iPhone (Safari):** open the page → Share → **Add to Home Screen**
+- **Android (Chrome):** open the page → ⋮ menu → **Install app** / **Add to Home screen**
+
+Install `/member.html` for athletes (black KYRI icon) and `/app.html` for Kyri (white **KYRI Coach** icon).
+
 ## Data
 Everything is stored in the browser's `localStorage` (`kyri:v2`) and seeded with a demo roster. The coach and athlete apps sync across tabs.
 You can reset it from **Settings → Reset demo data**. Demo profile photos are placeholder portraits loaded from randomuser.me. Uploaded photos are cropped to a 320px square and stored with the athlete.

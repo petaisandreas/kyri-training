@@ -90,3 +90,6 @@ themeBtn.addEventListener("click", () => {
 
 route();
 export const rerender = render;
+
+// Installable web app: register the offline-capable service worker.
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
