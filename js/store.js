@@ -325,6 +325,9 @@ function migrate(s) {
   s.groups ||= defaultGroups();
   s.academy.graceDay ||= 7;
   s.academy.ranking = { ...defaultRanking(), ...(s.academy.ranking || {}) };
+  // Undo the short-lived generic "TrainHub" rebrand in saved demo data.
+  if (s.academy.name === "TrainHub") s.academy.name = "KYRI Training";
+  s.academy.ranking.prize = s.academy.ranking.prize.replace("gym t-shirt", "KYRI t-shirt");
   s.academy.achievementTypes ||= defaultAchievementTypes();
   s.achievements ||= [];
   s.prizes ||= {};
