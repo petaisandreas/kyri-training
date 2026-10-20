@@ -1,10 +1,10 @@
 {
-  "id": "member.html",
+  "id": "./member.html",
   "name": "KYRI — Athlete",
   "short_name": "KYRI",
   "description": "Book your sessions with Kyri.",
-  "start_url": "member.html",
-  "scope": "./",
+  "start_url": "./member.html",
+  "scope": "./member.html",
   "display": "standalone",
   "background_color": "#0b0b0c",
   "theme_color": "#000000",
