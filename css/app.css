@@ -336,3 +336,31 @@ input[type="search"].input { min-width: 220px; }
 .photo-edit span { position: absolute; inset: auto 0 0 0; padding: 3px 0; font-size: 11px; font-weight: 700; text-align: center; color: #fff; background: rgba(0,0,0,.6); border-radius: 0 0 999px 999px; opacity: 0; transition: opacity .15s; }
 .photo-edit:hover span, .photo-edit:focus-visible span { opacity: 1; }
 .profile-head .photo-edit .avatar { width: 88px; height: 88px; font-size: 26px; }
+
+/* ranking */
+.rank-no { width: 26px; height: 26px; flex: none; border-radius: 50%; display: inline-grid; place-items: center; font: 800 12px var(--display); background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); }
+.rank-no.r1 { background: #e3b341; border-color: #e3b341; color: #111; }
+.rank-no.r2 { background: #c0c4cc; border-color: #c0c4cc; color: #111; }
+.rank-no.r3 { background: #c07a43; border-color: #c07a43; color: #111; }
+.rank-table tr.top td { background: color-mix(in srgb, var(--ink) 3%, transparent); }
+.prize-card { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; border-color: color-mix(in srgb, #e3b341 45%, var(--line)); }
+.prize-card h2 { font: 800 22px/1.2 var(--display); margin: 2px 0 4px; }
+.prize-card .muted { margin: 0; }
+.prize-ico { font-size: 40px; line-height: 1; }
+.podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; max-width: 620px; margin: 6px auto 22px; }
+.pod { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; position: relative; min-width: 0; }
+.pod .avatar { width: 64px; height: 64px; font-size: 20px; border: 3px solid var(--line); }
+.pod-1 .avatar { width: 84px; height: 84px; border-color: #e3b341; }
+.pod-2 .avatar { border-color: #c0c4cc; } .pod-3 .avatar { border-color: #c07a43; }
+.pod-rank { position: absolute; top: 50px; font: 800 12px var(--display); background: var(--ink); color: var(--bg); border-radius: 99px; padding: 1px 8px; }
+.pod-1 .pod-rank { top: 70px; background: #e3b341; color: #111; }
+.pod b { margin-top: 10px; font-size: 14px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod small { color: var(--muted); font-weight: 600; }
+.pod-step { display: block; width: 100%; margin-top: 8px; border-radius: 6px 6px 0 0; background: var(--surface); border: 1px solid var(--line); border-bottom: 0; height: 46px; }
+.pod-1 .pod-step { height: 76px; background: color-mix(in srgb, #e3b341 18%, var(--surface)); }
+.pod-2 .pod-step { height: 56px; } .pod-3 .pod-step { height: 40px; }
+.pad-list { padding: 0 20px 8px; }
+.list .row .avatar { width: 30px; height: 30px; font-size: 11px; }
+.kpis-4-sm { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ref-tag { color: var(--ok) !important; font-weight: 600; }
+@media (max-width: 860px) { .kpis-4-sm { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pod .avatar { width: 52px; height: 52px; } .pod-1 .avatar { width: 66px; height: 66px; } .pod-rank { top: 40px; } .pod-1 .pod-rank { top: 54px; } }

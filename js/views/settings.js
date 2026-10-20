@@ -25,6 +25,22 @@ export default {
         <div class="form-grid">${field("Grace period ends on day", "graceDay", a.graceDay || 10, { type: "number", min: 1, step: 1 })}</div>
         <button class="btn btn-primary mt">Save</button>
       </form>
+      <form class="card" data-ranking>
+        <header class="card-head"><h2>Monthly ranking</h2><a class="link" href="#/rankings">Leaderboard →</a></header>
+        <p class="muted">Points athletes earn each month. The #1 athlete wins the prize.</p>
+        <div class="form-grid">
+          ${field("Points per 1-on-1 PT session", "pt", a.ranking.pt, { type: "number", min: 0 })}
+          ${field("Points per group session", "group", a.ranking.group, { type: "number", min: 0 })}
+          ${field("Points per friend who signs up", "referral", a.ranking.referral, { type: "number", min: 0 })}
+          ${field("Default monthly prize", "prize", a.ranking.prize, { required: true, span: 2 })}
+        </div>
+        <button class="btn btn-primary mt">Save ranking rules</button>
+      </form>
+      <section class="card">
+        <header class="card-head"><h2>Achievements</h2><button class="btn btn-sm btn-ghost" data-add-ach>+ Add achievement</button></header>
+        <ul class="list">${a.achievementTypes.map((t, i) => `<li class="row"><span class="grow">🏅 ${esc(t.title)}</span><b>+${t.points}</b><button class="icon-btn" data-rm-ach="${i}" title="Remove">✕</button></li>`).join("")}</ul>
+        <p class="muted small">You award these from an athlete's profile or the ranking page.</p>
+      </section>
       <section class="card">
         <header class="card-head"><h2>Programs</h2><button class="btn btn-sm btn-ghost" data-add-group>+ Add program</button></header>
         <ul class="list">${db().groups.map((g) => `<li class="row"><span class="dot" style="background:${esc(g.color)}"></span><span class="grow">${esc(g.name)}</span><span class="muted">${money(g.price)}/mo · ${db().students.filter((s) => s.status === "active" && (s.groupIds || []).includes(g.id)).length} athletes</span>${db().students.some((s) => (s.groupIds || []).includes(g.id)) ? "" : `<button class="icon-btn" data-rm-group="${g.id}" title="Remove">✕</button>`}</li>`).join("")}</ul>
@@ -50,6 +66,14 @@ export default {
   mount(el) {
     $("[data-academy]", el).onsubmit = (e) => { e.preventDefault(); const v = readForm(e.target); update((d) => Object.assign(d.academy, v)); toast("Profile saved"); };
     $("[data-pay-rules]", el).onsubmit = (e) => { e.preventDefault(); const v = readForm(e.target); update((d) => (d.academy.graceDay = Math.min(28, Math.max(1, v.graceDay || 10)))); toast("Saved"); };
+    $("[data-ranking]", el).onsubmit = (e) => { e.preventDefault(); const v = readForm(e.target); update((d) => Object.assign(d.academy.ranking, { pt: v.pt || 0, group: v.group || 0, referral: v.referral || 0, prize: v.prize })); toast("Ranking rules saved"); };
+    $("[data-add-ach]", el).onclick = () => {
+      const title = prompt("Achievement name (e.g. First 5k run)");
+      if (!title) return;
+      const points = Number(prompt("Points it's worth", "20")) || 0;
+      if (points > 0) update((d) => d.academy.achievementTypes.push({ title: title.trim(), points }));
+    };
+    $$("[data-rm-ach]", el).forEach((b) => (b.onclick = () => update((d) => d.academy.achievementTypes.splice(Number(b.dataset.rmAch), 1))));
     $("[data-add-group]", el).onclick = () => {
       const name = prompt("Program name (e.g. Kids kickboxing)");
       if (!name) return;

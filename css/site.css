@@ -98,3 +98,4 @@ body.site { overflow-x: hidden; }
   .tt { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .trial-form { grid-template-columns: minmax(0, 1fr); padding: 20px; }
 }
+.invite { margin: 0; padding: 12px 14px; border-radius: 6px; background: var(--accent-soft); border: 1px solid var(--line); font-size: 15px; }

@@ -1,4 +1,5 @@
-import { db, update, uid, today, iso, addDays, fullName, byId, money, classesOn, docStatus, groupsOf, monthlyFee, paymentStatus, markPaid, DISCIPLINE_NAMES, LEVELS, WEIGHT_CLASSES, isFighter, recordText, bookedCount, isBooked, DEMO_PASSWORD } from "../store.js";
+import { db, update, uid, today, iso, addDays, fullName, byId, money, classesOn, docStatus, groupsOf, monthlyFee, paymentStatus, markPaid, DISCIPLINE_NAMES, LEVELS, WEIGHT_CLASSES, isFighter, recordText, bookedCount, isBooked, DEMO_PASSWORD, monthlyRanking, monthName, referralsOf } from "../store.js";
+import { awardAchievement, pointsHelp } from "./rankings.js";
 import { uploadDocument, viewDocument, DOC_TONE, DOC_LABEL } from "../docs-ui.js";
 import { fmtSize } from "../files.js";
 import { esc, athleteAvatar, pickPhoto, $, $$, discChips, badge, fmtDate, fmtTime, avatar, modal, field, toast, empty } from "../ui.js";
@@ -44,6 +45,7 @@ function studentForm(s = {}) {
     ${field("Status", "status", s.status || "active", { options: ["active", "frozen", "cancelled"] })}
     ${field("App password", "password", s.password || DEMO_PASSWORD, { required: true })}
     ${field("Joined", "joined", s.joined || today(), { type: "date" })}
+    ${field("Brought in by (referral)", "referredBy", s.referredBy || "", { options: [["", "Nobody"], ...d.students.filter((x) => x.id !== s.id).sort((a, b) => a.first.localeCompare(b.first)).map((x) => [x.id, fullName(x)])], span: 2 })}
     <div class="field span-2"><span>Programs (monthly billing)</span><div class="group-picks">${d.groups.map((g) => `<label class="check"><input type="checkbox" data-multi="1" name="groupIds" value="${g.id}" ${(s.groupIds || []).includes(g.id) ? "checked" : ""}/> ${esc(g.name)} <small class="muted">${money(g.price)}/mo</small></label>`).join("")}</div></div>
     ${field("Coach notes", "notes", s.notes, { type: "textarea", span: 2 })}
     ${field("Liability waiver signed", "waiver", s.waiver, { type: "checkbox" })}
@@ -207,6 +209,24 @@ function detail(id) {
     </section>
   </div>
 
+  ${(() => {
+    const rows = monthlyRanking(), me = rows.find((r) => r.s.id === s.id);
+    const achs = d.achievements.filter((a) => a.studentId === s.id).sort((a, b) => b.date.localeCompare(a.date));
+    const refs = referralsOf(s.id);
+    return `<section class="card">
+      <header class="card-head"><h2>${esc(monthName(today().slice(0, 7)))} ranking</h2><div class="row gap"><a class="link" href="#/rankings">Leaderboard →</a><button class="btn btn-sm btn-primary" data-award>🏅 Award achievement</button></div></header>
+      <div class="kpis kpis-4-sm">
+        <div class="kpi"><span>Position</span><strong>${me ? "#" + me.rank : "—"}</strong><small>of ${rows.length}</small></div>
+        <div class="kpi"><span>Points</span><strong>${me?.points || 0}</strong><small>${me ? `${me.pt} PT · ${me.group} group` : "no sessions yet"}</small></div>
+        <div class="kpi"><span>Achievements</span><strong>${me?.ach.length || 0}</strong><small>${me?.achPts || 0} pts this month</small></div>
+        <div class="kpi"><span>Friends brought</span><strong>${refs.length}</strong><small>${me?.refs.length || 0} this month</small></div>
+      </div>
+      ${achs.length || refs.length ? `<div class="grid grid-2"><ul class="list">${achs.slice(0, 6).map((a) => `<li class="row"><span class="grow">🏅 ${esc(a.title)}<small>${fmtDate(a.date)}${a.note ? " · " + esc(a.note) : ""}</small></span>${badge("+" + a.points, "ok")}</li>`).join("") || `<li class="row muted">No achievements yet</li>`}</ul>
+        <ul class="list">${refs.map((f) => `<li class="row">${athleteAvatar(f)}<a class="grow" href="#/students/${f.id}">${esc(fullName(f))}<small>joined ${fmtDate(f.joined)}</small></a></li>`).join("") || `<li class="row muted">Hasn't brought a friend yet</li>`}</ul></div>` : ""}
+      <p class="muted small">${pointsHelp()}</p>
+    </section>`;
+  })()}
+
   <div class="grid grid-2">
     <section class="card flush">
       <header class="card-head pad"><h2>Upcoming bookings</h2><a class="link" href="#/schedule">Schedule →</a></header>
@@ -282,6 +302,7 @@ export default {
       $("[data-doc-upload]", el).onclick = () => uploadDocument({ studentId: id });
       $$("[data-doc]", el).forEach((tr) => (tr.onclick = () => viewDocument(db().documents.find((x) => x.id === tr.dataset.doc))));
       $("[data-book]", el).onclick = () => bookFor(s);
+      $("[data-award]", el).onclick = () => awardAchievement(s);
       $("[data-photo]", el).onclick = async () => {
         if (s.photo && !confirm(`Replace ${s.first}'s photo?\n\n(Cancel to keep it.)`)) return;
         const photo = await pickPhoto();

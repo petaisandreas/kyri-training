@@ -1,5 +1,5 @@
 // Data layer: a single JSON document in localStorage, seeded with a demo roster of fighters and fitness clients.
-const KEY = "kyri:v2";
+const KEY = "kyri:v3";
 
 /** Martial arts a fighter competes in (trained elsewhere — Kyri does their conditioning). Colors are used for chips. */
 export const DISCIPLINES = {
@@ -101,8 +101,17 @@ function seed() {
     });
   }
 
+  // Referrals: some recent athletes were brought in by existing ones (counts toward the monthly ranking).
+  // [referred athlete index, referrer index, months ago, day of month]
+  for (const [i, by, ago, day] of [[33, 1, 0, 4], [32, 1, 0, 11], [31, 4, 0, 15], [30, 9, 1, 6], [29, 1, 1, 19], [28, 4, 1, 23], [27, 2, 2, 12]]) {
+    const st = students[i];
+    const date = new Date(now.getFullYear(), now.getMonth() - ago, ago === 0 ? Math.min(day, now.getDate()) : day);
+    Object.assign(st, { referredBy: students[by].id, joined: iso(date), status: "active" });
+  }
+
   // Fighter conditioning and fight camp are for martial artists; everything else is open to everyone.
   const fits = (c, s) => !["Fighter conditioning", "Fight camp"].includes(c.level) || s.disciplines.length > 0;
+  const trainingOn = (s, date) => s.joined <= iso(date);
 
   // Attendance for the last 120 days (1-on-1 slots get one athlete each)
   const attendance = [];
@@ -110,7 +119,7 @@ function seed() {
   for (let d = 120; d >= 1; d--) {
     const date = addDays(now, -d);
     for (const c of classes.filter((c) => c.day === date.getDay())) {
-      const pool = students.filter((s) => s.status === "active" && fits(c, s));
+      const pool = students.filter((s) => s.status === "active" && fits(c, s) && trainingOn(s, date));
       if (!pool.length) continue;
       const n = c.capacity === 1 ? (r() < 0.8 ? 1 : 0) : Math.min(c.capacity, Math.floor(pool.length * (0.25 + r() * 0.35)));
       const used = new Set();
@@ -185,6 +194,8 @@ function seed() {
       { delay: 3, channel: "SMS", text: "Your intro offer ends soon. Want me to lock in your training slots?" } ] },
     { id: uid("au"), name: "Fight week check-in", trigger: "7 days before a fight", enabled: true, steps: [
       { delay: 0, channel: "SMS", text: "Fight week. We taper the conditioning now: stick to the weight plan, sleep, and stay sharp." } ] },
+    { id: uid("au"), name: "Monthly winner", trigger: "Monthly ranking winner", enabled: true, steps: [
+      { delay: 0, channel: "SMS", text: "You finished #1 in this month's KYRI ranking! Your prize is waiting at the gym." } ] },
     { id: uid("au"), name: "We miss you", trigger: "No session for 14 days", enabled: true, steps: [
       { delay: 0, channel: "Email", text: "Haven't seen you in a while. Here's this week's timetable, so book a session." } ] },
   ];
@@ -195,12 +206,50 @@ function seed() {
     { id: uid("ev"), title: "Conditioning Test Day", type: "Fitness test", date: iso(addDays(now, 30)), time: "10:00", price: 0, capacity: 20, registrations: students.slice(10, 17).map((s) => s.id) },
   ];
 
+  // A friend-of-an-athlete lead still in the pipeline (not counted until they sign up).
+  Object.assign(leads[0], { source: "Referral", referredBy: students[1].id, stage: "Trial booked", trialDate: iso(addDays(now, 2)) });
+  Object.assign(leads[1], { source: "Referral", referredBy: students[4].id, stage: "New" });
+
+  // Achievements Kyri has awarded over the last three months.
+  const achievementTypes = defaultAchievementTypes();
+  const fighterOnly = new Set(["Won a fight", "Finished fight camp", "Made weight"]);
+  const achievements = [];
+  for (let m = 2; m >= 0; m--) {
+    for (let k = 0; k < (m === 0 ? 11 : 15); k++) {
+      const st = pick(students.filter((x) => x.status === "active"));
+      let t = pick(achievementTypes);
+      if (fighterOnly.has(t.title) && !st.disciplines.length) t = achievementTypes[0];
+      const day = 1 + Math.floor(r() * (m === 0 ? Math.max(1, now.getDate() - 1) : 27));
+      achievements.push({ id: uid("ac"), studentId: st.id, date: iso(new Date(now.getFullYear(), now.getMonth() - m, day)), title: t.title, points: t.points, note: "" });
+    }
+  }
+
   return {
-    academy: { name: "KYRI Training", owner: "Kyriakos Nicolaou", currency: "EUR", locations: ["Main Gym"], email: "kyri@trainwithkyri.com", instagram: "trainwithkyri", graceDay: 7 },
+    academy: { name: "KYRI Training", owner: "Kyriakos Nicolaou", currency: "EUR", locations: ["Main Gym"], email: "kyri@trainwithkyri.com", instagram: "trainwithkyri", graceDay: 7,
+      ranking: defaultRanking(), achievementTypes },
+    achievements, prizes: {}, winners: {},
     staff, plans, classes, students, attendance, bookings, invoices, expenses, leads, automations, events, messages: [],
     groups: defaultGroups(),
     documents: sampleDocuments(students),
   };
+}
+
+// --- monthly ranking ------------------------------------------------------------
+// Every month athletes collect points; #1 wins Kyri's prize. Points per 1-on-1 PT session,
+// per group session, per friend who signs up, plus whatever each achievement is worth.
+function defaultRanking() {
+  return { pt: 15, group: 3, referral: 50, prize: "Free 1-on-1 PT session + KYRI t-shirt" };
+}
+function defaultAchievementTypes() {
+  return [
+    { title: "Personal record", points: 20 },
+    { title: "Perfect week (4+ sessions)", points: 15 },
+    { title: "Hit weight / body-fat target", points: 30 },
+    { title: "Transformation milestone", points: 30 },
+    { title: "Made weight", points: 25 },
+    { title: "Finished fight camp", points: 40 },
+    { title: "Won a fight", points: 50 },
+  ];
 }
 
 // --- programs & monthly payment status -----------------------------------------
@@ -275,6 +324,11 @@ function migrate(s) {
   s.bookings ||= [];
   s.groups ||= defaultGroups();
   s.academy.graceDay ||= 7;
+  s.academy.ranking = { ...defaultRanking(), ...(s.academy.ranking || {}) };
+  s.academy.achievementTypes ||= defaultAchievementTypes();
+  s.achievements ||= [];
+  s.prizes ||= {};
+  s.winners ||= {};
   for (const st of s.students) {
     st.disciplines ||= [];
     st.record ||= { w: 0, l: 0, d: 0 };
@@ -354,6 +408,30 @@ export function markAttended(studentId, classId, date = today()) {
 export function classesOn(date) {
   const day = new Date(date + "T12:00").getDay();
   return state.classes.filter((c) => c.day === day).sort((a, b) => a.start.localeCompare(b.start));
+}
+
+export const monthLabel = (m) => new Date(m + "-15T12:00").toLocaleString("en-US", { month: "long", year: "numeric" });
+export const monthName = (m) => new Date(m + "-15T12:00").toLocaleString("en-US", { month: "long" });
+export const shiftMonth = (m, n) => { const [y, mo] = m.split("-").map(Number); return iso(new Date(y, mo - 1 + n, 1)).slice(0, 7); };
+export const prizeFor = (month) => state.prizes[month] || state.academy.ranking.prize;
+export const referralsOf = (studentId) => state.students.filter((s) => s.referredBy === studentId);
+
+/** The month's leaderboard: points from PT sessions, group sessions, achievements and friends who signed up. */
+export function monthlyRanking(month = thisMonth()) {
+  const R = state.academy.ranking;
+  const solo = new Set(state.classes.filter((c) => c.capacity === 1).map((c) => c.id));
+  const rows = new Map();
+  const row = (id) => { if (!rows.has(id)) rows.set(id, { id, pt: 0, group: 0, ach: [], achPts: 0, refs: [] }); return rows.get(id); };
+  for (const a of state.attendance) if (a.date.startsWith(month)) solo.has(a.classId) ? row(a.studentId).pt++ : row(a.studentId).group++;
+  for (const a of state.achievements) if (a.date.startsWith(month)) { const r = row(a.studentId); r.ach.push(a); r.achPts += Number(a.points) || 0; }
+  for (const s of state.students) if (s.referredBy && s.joined?.startsWith(month) && s.status !== "cancelled") row(s.referredBy).refs.push(s);
+  return [...rows.values()]
+    .map((r) => ({ ...r, s: state.students.find((x) => x.id === r.id) }))
+    .filter((r) => r.s && r.s.status !== "cancelled")
+    .map((r) => ({ ...r, points: r.pt * R.pt + r.group * R.group + r.achPts + r.refs.length * R.referral }))
+    .filter((r) => r.points > 0)
+    .sort((a, b) => b.points - a.points || b.refs.length - a.refs.length || b.pt - a.pt || a.s.first.localeCompare(b.s.first))
+    .map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
 export const bookedCount = (classId, date) => state.bookings.filter((b) => b.classId === classId && b.date === date).length;

@@ -62,7 +62,7 @@ body.member { min-height: 100vh; }
 .m-product b { font-size: 14px; line-height: 1.3; }
 .m-product .price { font: 800 18px var(--display); margin: auto 0 6px; }
 
-.m-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); z-index: 10; }
+.m-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); z-index: 10; }
 .m-tabs button { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; }
 .m-tabs button span { position: relative; font-size: 18px; line-height: 1.2; }
 .m-tabs button.on { color: var(--accent); }
@@ -91,3 +91,23 @@ body.member { min-height: 100vh; }
 .m-photo .avatar { width: 76px; height: 76px; font-size: 24px; border: 2px solid #262629; }
 .m-photo span { opacity: 1; font-size: 10px; }
 .m-goal { margin: 12px 0; color: #c9c9c6; font-size: 14px; }
+.m-rank-teaser { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; cursor: pointer; font: inherit; color: inherit; border-color: color-mix(in srgb, #e3b341 40%, var(--line)); }
+.m-rank-teaser small { display: block; color: var(--muted); font-size: 12.5px; }
+.m-rank-big { font: 800 34px/1 var(--display); min-width: 64px; text-align: center; color: #e3b341; }
+.m-prize { display: flex; align-items: center; gap: 14px; border-color: color-mix(in srgb, #e3b341 45%, var(--line)); }
+.m-prize > span { font-size: 34px; }
+.m-prize small { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.m-prize b { font: 700 17px/1.3 var(--display); }
+.m-me-rank { display: flex; align-items: center; gap: 14px; }
+.m-me-rank small { display: block; color: var(--muted); font-size: 13px; }
+.m-breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.m-breakdown div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 6px; text-align: center; }
+.m-breakdown strong { display: block; font: 800 22px/1.1 var(--display); }
+.m-breakdown span { font-size: 11px; color: var(--muted); line-height: 1.3; display: block; }
+.m-board li.me { background: var(--accent-soft); margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+.m-board .avatar { width: 32px; height: 32px; font-size: 11px; }
+.m-invite { display: flex; flex-direction: column; gap: 10px; }
+.m-invite p { margin: 0; font-size: 14px; }
+.m-invite input { height: 40px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); padding: 0 10px; font-size: 12.5px; width: 100%; }
+.m-tabs button { font-size: 10.5px; }
+.center { text-align: center; }

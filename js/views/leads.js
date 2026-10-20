@@ -1,4 +1,4 @@
-import { db, update, uid, today, LEAD_STAGES, DISCIPLINE_NAMES, DEMO_PASSWORD } from "../store.js";
+import { db, update, uid, today, LEAD_STAGES, DISCIPLINE_NAMES, DEMO_PASSWORD, byId, fullName } from "../store.js";
 import { esc, $, $$, badge, fmtDate, modal, field, toast } from "../ui.js";
 
 let tab = "pipeline";
@@ -14,7 +14,8 @@ function leadForm(l) {
       ${field("Email", "email", l?.email, { type: "email" })}
       ${field("Phone", "phone", l?.phone)}
       ${field("Source", "source", l?.source || "Walk-in", { options: SOURCES })}
-      ${field("Interested in", "interest", l?.interest || "Adult Gi", { options: ["Adult Gi", "No-Gi", "Kids Program", "Self-defense", "Competition"] })}
+      ${field("Interested in", "interest", l?.interest || "Fight conditioning", { options: ["Fight conditioning", "Weight loss", "Cardio & HIIT", "Strength", "1-on-1 PT", "Fight camp", "Not sure yet"] })}
+      ${field("Brought in by (athlete)", "referredBy", l?.referredBy || "", { options: [["", "Nobody"], ...db().students.filter((x) => x.status !== "cancelled").sort((a, b) => a.first.localeCompare(b.first)).map((x) => [x.id, fullName(x)])], span: 2 })}
       ${field("Stage", "stage", l?.stage || "New", { options: LEAD_STAGES })}
       ${field("Trial class date", "trialDate", l?.trialDate, { type: "date" })}
       ${field("Notes", "notes", l?.notes, { type: "textarea", span: 2 })}
@@ -22,6 +23,7 @@ function leadForm(l) {
     danger: isNew ? null : { label: "Delete lead", action: () => update((d) => (d.leads = d.leads.filter((x) => x.id !== l.id))) },
     onSubmit(v) {
       if (v.trialDate && v.stage === "New") v.stage = "Trial booked";
+      if (v.referredBy) v.source = "Referral";
       update((d) => (isNew ? d.leads.push({ id: uid("ld"), created: today(), ...v }) : Object.assign(d.leads.find((x) => x.id === l.id), v)));
       toast(isNew ? "Lead added — welcome sequence queued" : "Saved");
     },
@@ -37,11 +39,12 @@ function convert(l) {
       disciplines: DISCIPLINE_NAMES.filter((n) => (l.notes || "").includes(n)), level: DISCIPLINE_NAMES.some((n) => (l.notes || "").includes(n)) ? "Recreational martial artist" : "Fitness client", weightClass: "—", record: { w: 0, l: 0, d: 0 }, goal: l.interest || "",
       joined: today(), status: "active", groupIds: [/1-on-1|PT/.test(l.interest) ? "gr_pt" : /Fight/.test(l.interest) ? "gr_fight" : "gr_group"].filter((g) => d.groups.some((x) => x.id === g)),
       planId: (/1-on-1|PT/.test(l.interest) ? d.plans.find((p) => p.name.includes("1-on-1")) : d.plans.find((p) => p.name.includes("Group")))?.id || d.plans[0].id,
-      waiver: false, password: DEMO_PASSWORD, notes: `Converted from lead (${l.source}).`, location: d.academy.locations[0],
+      waiver: false, password: DEMO_PASSWORD, notes: `Converted from lead (${l.source}).`, location: d.academy.locations[0], referredBy: l.referredBy || "",
     });
     d.leads.find((x) => x.id === l.id).stage = "Won";
   });
-  toast(`${first} is now on the roster 🥊`);
+  const by = l.referredBy && byId("students", l.referredBy);
+  toast(by ? `${first} is on the roster — +${db().academy.ranking.referral} ranking pts for ${by.first} 🎉` : `${first} is now on the roster 🥊`);
   location.hash = `#/students/${id}`;
 }
 
@@ -57,7 +60,7 @@ function automationForm(a) {
     wide: true,
     body: `<div class="form-grid">
       ${field("Name", "name", a?.name, { required: true })}
-      ${field("Trigger", "trigger", a?.trigger || "Lead created", { options: ["Lead created", "Trial class booked", "Trial class attended", "Membership started", "First check-in", "No check-in for 14 days", "Payment failed", "Belt promotion"] })}
+      ${field("Trigger", "trigger", a?.trigger || "Lead created", { options: ["Lead created", "Trial class booked", "Trial class attended", "Membership started", "First session", "No session for 14 days", "Payment failed", "Achievement awarded", "Monthly ranking winner", "7 days before a fight"] })}
     </div>
     <h4 class="mt">Steps</h4><div data-steps>${steps.map(stepRow).join("")}</div>
     <button type="button" class="btn btn-ghost btn-sm" data-add-step>+ Add step</button>`,
@@ -86,7 +89,7 @@ function render() {
       const ls = d.leads.filter((l) => l.stage === st).sort((a, b) => b.created.localeCompare(a.created));
       return `<div class="lane" data-lane="${st}"><div class="lane-head"><b>${st}</b><span>${ls.length}</span></div>
         ${ls.map((l) => `<div class="lead-card" draggable="true" data-lead="${l.id}">
-          <b>${esc(l.name)}</b><small>${esc(l.interest)} · ${esc(l.source)}</small>
+          <b>${esc(l.name)}</b><small>${esc(l.interest)} · ${esc(l.source)}</small>${l.referredBy && byId("students", l.referredBy) ? `<small class="ref-tag">👥 Friend of ${esc(fullName(byId("students", l.referredBy)))}</small>` : ""}
           <small class="muted">${l.trialDate ? "Trial " + fmtDate(l.trialDate, { month: "short", day: "numeric" }) : "Added " + fmtDate(l.created, { month: "short", day: "numeric" })}</small>
           ${!["Won", "Lost"].includes(st) ? `<div class="lead-actions"><button class="btn btn-sm" data-convert="${l.id}">Convert</button><button class="btn btn-sm btn-ghost" data-next="${l.id}">Advance →</button></div>` : ""}
         </div>`).join("")}</div>`;
@@ -103,9 +106,9 @@ function render() {
         <pre class="code">&lt;iframe src="${esc(origin)}/index.html#trial" width="100%" height="560" style="border:0"&gt;&lt;/iframe&gt;</pre>
         <button class="btn btn-ghost btn-sm" data-copy>Copy snippet</button></section>
       <section class="card"><header class="card-head"><h2>Referral program</h2></header>
-        <p class="muted">Athletes share their personal link; each signup is tagged as a referral so you can reward them.</p>
-        <div class="kpis kpis-2"><div class="kpi"><span>Referral leads</span><strong>${d.leads.filter((l) => l.source === "Referral").length}</strong></div>
-        <div class="kpi"><span>Referrals won</span><strong>${d.leads.filter((l) => l.source === "Referral" && l.stage === "Won").length}</strong></div></div></section>
+        <p class="muted">Every athlete has a personal invite link in their app (Ranking tab). Friends who sign up through it are tagged here, and when you convert them the athlete gets <b>+${d.academy.ranking.referral} ranking points</b>.</p>
+        <div class="kpis kpis-2"><div class="kpi"><span>Friends in the pipeline</span><strong>${d.leads.filter((l) => l.referredBy && !["Won", "Lost"].includes(l.stage)).length}</strong></div>
+        <div class="kpi"><span>Athletes brought by athletes</span><strong>${d.students.filter((x) => x.referredBy).length}</strong></div></div></section>
     </div>`,
   }[tab];
 

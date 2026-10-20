@@ -72,6 +72,7 @@
       <p>Tell Kyri what you're training for. He'll get back to you to set up your free trial session.</p>
     </div>
     <form class="trial-form" id="trial-form">
+      <p class="invite span" id="invite" hidden></p>
       <label><span>Name *</span><input name="name" required /></label>
       <label><span>Phone *</span><input name="phone" type="tel" required /></label>
       <label class="span"><span>Email *</span><input name="email" type="email" required /></label>
@@ -116,11 +117,16 @@
       return `<div class="tt-col"><h3>${DAYS[day]}</h3>${cls.map((c) => `<div class="tt-item ${c.capacity === 1 ? "solo" : ""}" style="--lv:${sessionColor(c)}"><span>${fmtTime(c.start)}</span><b>${esc(c.name)}</b></div>`).join("")}</div>`;
     }).join("");
 
+    // Invite links from the athlete app look like index.html?ref=<athleteId>#trial
+    const ref = new URLSearchParams(location.search).get("ref");
+    const inviter = ref && d.students.find((s) => s.id === ref && s.status !== "cancelled");
+    if (inviter) { const el = document.getElementById("invite"); el.hidden = false; el.innerHTML = `👋 <b>${esc(inviter.first)}</b> invited you to train with Kyri`; }
+
     const form = document.getElementById("trial-form");
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const v = Object.fromEntries(new FormData(form));
-      update((db) => db.leads.push({ id: uid("ld"), name: v.name, email: v.email, phone: v.phone, source: "Website form", stage: "New", interest: v.interest, created: today(), trialDate: "", notes: `${v.art === "No, just fitness" ? "Fitness client" : "Fights: " + v.art}${v.goal ? " · " + v.goal : ""}` }));
+      update((db) => db.leads.push({ id: uid("ld"), name: v.name, email: v.email, phone: v.phone, source: inviter ? "Referral" : "Website form", referredBy: inviter ? inviter.id : "", stage: "New", interest: v.interest, created: today(), trialDate: "", notes: `${v.art === "No, just fitness" ? "Fitness client" : "Fights: " + v.art}${v.goal ? " · " + v.goal : ""}` }));
       form.innerHTML = `<div class="thanks span"><h3>Got it, ${esc(v.name.split(" ")[0])}.</h3><p>Kyri will be in touch to book your free session.</p><a class="btn btn-primary" href="app.html#/leads">See it in the coach app →</a></div>`;
     });
   </script>

@@ -10,14 +10,15 @@ import reports from "./views/reports.js";
 import events from "./views/events.js";
 import settings from "./views/settings.js";
 import documents from "./views/documents.js";
+import rankings from "./views/rankings.js";
 
 const NAV = [
   ["Overview", [["dashboard", "Dashboard", "◧"]]],
-  ["Training", [["students", "Athletes", "◉"], ["schedule", "Schedule & bookings", "▦"], ["events", "Fights & events", "✦"], ["documents", "Documents", "▤"]]],
+  ["Training", [["students", "Athletes", "◉"], ["schedule", "Schedule & bookings", "▦"], ["rankings", "Monthly ranking", "★"], ["events", "Fights & events", "✦"], ["documents", "Documents", "▤"]]],
   ["Business", [["billing", "Billing", "€"], ["leads", "Leads & follow-ups", "➚"], ["reports", "Reports", "◔"]]],
   ["System", [["settings", "Settings", "⚙"]]],
 ];
-const VIEWS = { dashboard, students, schedule, billing, leads, reports, events, settings, documents };
+const VIEWS = { dashboard, students, schedule, billing, leads, reports, events, settings, documents, rankings };
 
 const main = $("#view");
 let current = { name: "", params: [] };

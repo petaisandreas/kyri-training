@@ -1,10 +1,10 @@
 // Athlete app: athletes sign in to book PT and conditioning sessions with Kyri, see their training, and pay.
-import { db, update, subscribe, uid, today, iso, addDays, byId, money, classesOn, DAYS, docStatus, isBooked, bookedCount, recordText, isFighter, sessionColor } from "./store.js";
+import { db, update, subscribe, uid, today, iso, addDays, byId, money, classesOn, DAYS, docStatus, isBooked, bookedCount, recordText, isFighter, sessionColor, monthlyRanking, prizeFor, thisMonth, monthName, shiftMonth, referralsOf, fullName } from "./store.js";
 import { uploadDocument, viewDocument, DOC_LABEL } from "./docs-ui.js";
 import { esc, $, $$, discChips, badge, fmtDate, fmtTime, toast, empty, athleteAvatar, pickPhoto } from "./ui.js";
 
 const SESSION = "kyri:member";
-const TABS = [["home", "Home", "⌂"], ["book", "Book", "▦"], ["training", "Training", "◉"], ["pay", "Billing", "€"]];
+const TABS = [["home", "Home", "⌂"], ["book", "Book", "▦"], ["rank", "Ranking", "★"], ["training", "Training", "◉"], ["pay", "Billing", "€"]];
 let tab = "home";
 let bookFilter = "";
 
@@ -105,6 +105,8 @@ function home(s) {
   ${owed.length ? `<button class="m-alert" data-go="pay"><b>${owed.length} unpaid invoice${owed.length > 1 ? "s" : ""}</b><span>${money(owed.reduce((a, i) => a + i.amount, 0))} · Tap to pay</span></button>` : ""}
   ${h.status === "valid" ? "" : `<button class="m-alert ${h.status === "expiring" ? "warn" : ""}" data-upload-hc><b>Medical clearance ${DOC_LABEL[h.status].toLowerCase()}</b><span>${h.doc?.expires ? (h.status === "expired" ? "Expired " : "Expires ") + fmtDate(h.doc.expires) + " · " : ""}Tap to upload a new one</span></button>`}
   ${s.waiver ? "" : `<div class="m-alert warn"><b>Waiver needed</b><span>Please sign it before your next session.</span></div>`}
+  ${(() => { const rows = monthlyRanking(), me = rows.find((r) => r.s.id === s.id); return `<button class="m-card m-rank-teaser" data-go="rank"><span class="m-rank-big">${me ? "#" + me.rank : "—"}</span>
+    <span class="grow"><b>${me ? `${me.points} pts this month` : "Start earning points"}</b><small>🎁 #1 wins: ${esc(prizeFor(today().slice(0, 7)))}</small></span><span class="muted">›</span></button>`; })()}
   <div class="m-stats">
     <div><strong>${thisMonth}</strong><span>sessions this month</span></div>
     <div><strong>${streakWeeks(s.id)}</strong><span>week streak</span></div>
@@ -137,6 +139,50 @@ function book(s) {
         ${booked ? `<button class="btn btn-sm m-booked" data-unbook="${c.id}|${date}">Booked ✓</button>` : `<button class="btn btn-sm btn-primary" data-book="${c.id}|${date}" ${full ? "disabled" : ""}>${full ? (c.capacity === 1 ? "Taken" : "Full") : "Book"}</button>`}</div>`;
     }).join("")}`).join("") : empty("No sessions match in the next 7 days.")}`;
 }
+
+function rank(s) {
+  const d = db();
+  const month = today().slice(0, 7);
+  const rows = monthlyRanking(month);
+  const me = rows.find((r) => r.s.id === s.id);
+  const R = d.academy.ranking;
+  const ahead = me && me.rank > 1 ? rows[me.rank - 2] : null;
+  const last = monthlyRanking(shiftMonth(month, -1))[0];
+  const link = inviteLink(s);
+  const friends = referralsOf(s.id);
+  const lastDay = new Date(Number(month.slice(0, 4)), Number(month.slice(5)), 0).getDate();
+  return `<h1 class="m-h1">${esc(monthName(month))} ranking</h1><p class="muted">Ends ${esc(monthName(month))} ${lastDay} · #1 wins Kyri's prize</p>
+  <div class="m-card m-prize"><span>🎁</span><div><small>This month's prize</small><b>${esc(prizeFor(month))}</b></div></div>
+  <div class="m-card m-me-rank">
+    <div class="m-rank-big">${me ? "#" + me.rank : "—"}</div>
+    <div class="grow"><b>${me ? `${me.points} points` : "No points yet"}</b><small>${me ? (me.rank === 1 ? "You're in first place. Keep it up!" : `${ahead.points - me.points + 1} pts to pass ${esc(ahead.s.first)}`) : "Book a session to get on the board"}</small></div>
+  </div>
+  ${me ? `<div class="m-breakdown">
+    <div><strong>${me.pt}</strong><span>1-on-1 PT<br/>+${me.pt * R.pt}</span></div>
+    <div><strong>${me.group}</strong><span>group<br/>+${me.group * R.group}</span></div>
+    <div><strong>${me.ach.length}</strong><span>achievements<br/>+${me.achPts}</span></div>
+    <div><strong>${me.refs.length}</strong><span>friends<br/>+${me.refs.length * R.referral}</span></div>
+  </div>` : ""}
+  <h2 class="m-title">Leaderboard</h2>
+  <div class="m-card flush"><ul class="list m-list m-board">${rows.slice(0, 10).map((r) => `<li class="row ${r.s.id === s.id ? "me" : ""}"><span class="rank-no r${r.rank}">${r.rank}</span>${athleteAvatar(r.s)}<span class="grow">${esc(r.s.id === s.id ? "You" : `${r.s.first} ${r.s.last[0] || ""}.`)}<small>${r.pt} PT · ${r.ach.length} 🏅 · ${r.refs.length} 👥</small></span><b>${r.points}</b></li>`).join("") || `<li class="row muted">Nobody has points yet. Be the first!</li>`}
+    ${me && me.rank > 10 ? `<li class="row me"><span class="rank-no">${me.rank}</span>${athleteAvatar(s)}<span class="grow">You</span><b>${me.points}</b></li>` : ""}</ul></div>
+  <h2 class="m-title">Bring a friend · +${R.referral} pts</h2>
+  <div class="m-card m-invite">
+    <p>Share your link. When a friend signs up with Kyri, you get <b>+${R.referral} points</b>.</p>
+    <input readonly value="${esc(link)}" data-link />
+    <button class="btn btn-primary full" data-share>Share my invite link</button>
+    ${friends.length ? `<small class="muted">Friends you've brought: ${friends.map((f) => esc(f.first)).join(", ")}</small>` : ""}
+  </div>
+  <h2 class="m-title">How to earn points</h2>
+  <div class="m-card flush"><ul class="list m-list">
+    <li class="row"><span class="grow">1-on-1 PT session</span><b>+${R.pt}</b></li>
+    <li class="row"><span class="grow">Group session</span><b>+${R.group}</b></li>
+    <li class="row"><span class="grow">Friend who signs up</span><b>+${R.referral}</b></li>
+    ${d.academy.achievementTypes.map((t) => `<li class="row"><span class="grow">🏅 ${esc(t.title)}</span><b>+${t.points}</b></li>`).join("")}
+  </ul></div>
+  ${last ? `<p class="muted small center">Last month's winner: <b>${esc(fullName(last.s))}</b> · ${last.points} pts</p>` : ""}`;
+}
+const inviteLink = (s) => new URL(`index.html?ref=${encodeURIComponent(s.id)}#trial`, location.href).href;
 
 function training(s) {
   const d = db();
@@ -184,7 +230,7 @@ function pay(s) {
 function render() {
   const s = me();
   if (!s) { setSession(null); root.innerHTML = login(); mountLogin(); document.title = "Sign in · KYRI"; return; }
-  const body = { home, book, training, pay }[tab](s);
+  const body = { home, book, rank, training, pay }[tab](s);
   const owed = db().invoices.filter((i) => i.studentId === s.id && i.status !== "paid").length;
   const scroll = window.scrollY;
   root.innerHTML = `
@@ -237,6 +283,13 @@ function mount(s) {
     if (!confirm(`Pay ${money(i.amount)} for "${i.description}" with the card on file?\n\n(Demo — no real charge.)`)) return;
     update((d) => (d.invoices.find((x) => x.id === i.id).status = "paid"));
     toast("Payment received — thank you!");
+  });
+  on("[data-share]", async () => {
+    const url = inviteLink(s);
+    try {
+      if (navigator.share) await navigator.share({ title: "Train with Kyri", text: `${s.first} invited you to train with Kyri. Your first session is free:`, url });
+      else { await navigator.clipboard.writeText(url); toast("Invite link copied"); }
+    } catch (e) { if (e?.name !== "AbortError") { $("[data-link]", root)?.select(); toast("Copy the link above to share it", "warn"); } }
   });
   on("[data-photo]", async () => {
     const photo = await pickPhoto();

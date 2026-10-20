@@ -1,4 +1,4 @@
-import { db, today, iso, addDays, money, fullName, byId, classesOn, DAYS, docStatus, paymentStatus, DISCIPLINES, DISCIPLINE_NAMES, LEVELS, isFighter, recordText } from "../store.js";
+import { db, today, iso, addDays, money, fullName, byId, classesOn, DAYS, docStatus, paymentStatus, DISCIPLINES, DISCIPLINE_NAMES, LEVELS, isFighter, recordText, monthlyRanking, prizeFor, thisMonth, monthName } from "../store.js";
 import { esc, barChart, fmtTime, athleteAvatar, badge, progress } from "../ui.js";
 
 export default {
@@ -96,7 +96,12 @@ export default {
       </section>
     </div>
 
-    <div class="grid grid-2">
+    <div class="grid grid-3">
+      <section class="card">
+        <header class="card-head"><h2>${esc(monthName(thisMonth()))} ranking</h2><a href="#/rankings" class="link">Full ranking →</a></header>
+        ${(() => { const rows = monthlyRanking().slice(0, 5); return rows.length ? `<ul class="list">${rows.map((r) => `<li class="row"><span class="rank-no r${r.rank}">${r.rank}</span>${athleteAvatar(r.s)}<a class="grow" href="#/students/${r.s.id}">${esc(fullName(r.s))}<small>${r.pt} PT · ${r.ach.length} achievements · ${r.refs.length} friends</small></a><b>${r.points}</b></li>`).join("")}</ul>` : `<p class="muted">No points yet this month.</p>`; })()}
+        <p class="muted small mt">🎁 Prize: ${esc(prizeFor(thisMonth()))}</p>
+      </section>
       <section class="card">
         <header class="card-head"><h2>Coming up</h2><a href="#/events" class="link">Fights & events →</a></header>
         ${upcoming.length ? `<ul class="list">${upcoming.map((e) => `<li class="row"><span class="date-tile"><b>${new Date(e.date + "T12:00").getDate()}</b>${new Date(e.date + "T12:00").toLocaleString("en-US", { month: "short" })}</span><span class="grow"><b>${esc(e.title)}</b><small>${esc(e.type)} · ${e.registrations.length}/${e.capacity}</small>${progress(e.registrations.length / e.capacity)}</span></li>`).join("")}</ul>` : `<p class="muted">No upcoming events.</p>`}
