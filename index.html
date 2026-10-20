@@ -4,15 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#000000" />
-  <title>TrainHub — Personal training & conditioning</title>
-  <meta name="description" content="Personal training: strength, conditioning and cardio for fighters and for everyone who wants to get fit. Book your sessions online." />
+  <title>KYRI Training — Personal training & conditioning</title>
+  <meta name="description" content="Personal training with Kyriakos Nicolaou: strength, conditioning and cardio for fighters and for everyone who wants to get fit. Book your sessions online." />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="css/tokens.css" />
   <link rel="stylesheet" href="css/site.css" />
 </head>
 <body class="site">
   <header class="nav">
-    <a href="#" class="brand"><span class="logo-mark" style="width:30px;height:30px"></span><span>TrainHub</span></a>
+    <a href="#" class="brand"><span class="logo-mark" style="width:30px;height:30px"></span><span>KYRI</span></a>
     <nav class="nav-links"><a href="#programs">Programs</a><a href="#timetable">Timetable</a><a href="#coach">Coach</a><a href="#trial">Free trial</a></nav>
     <div class="nav-cta"><a href="app.html" class="btn btn-ghost">Coach</a><a href="member.html" class="btn btn-primary">Book a session</a></div>
   </header>
@@ -21,12 +21,12 @@
     <div class="hero-copy">
       <p class="kicker">Personal training · Strength & conditioning · Cardio</p>
       <h1>Fight fit.<br />Or just fit.</h1>
-      <p class="lead">1-on-1 personal training and small-group sessions with <span data-coach-full>Kyriakos Nicolaou</span>. Fighters from every martial art come to him for their conditioning. Everyone else comes for the cardio, strength and fat loss. Same coach, same standard, a plan built around your goal.</p>
+      <p class="lead">1-on-1 personal training and small-group sessions with Kyriakos Nicolaou. Fighters from every martial art come to him for their conditioning. Everyone else comes for the cardio, strength and fat loss. Same coach, same standard, a plan built around your goal.</p>
       <div class="hero-cta"><a href="member.html" class="btn btn-primary btn-lg">Book your session</a><a href="#trial" class="btn btn-ghost btn-lg">Free trial →</a></div>
     </div>
     <div class="hero-mark" aria-hidden="true">
       <span class="logo-mark"></span>
-      <span class="word">TrainHub</span>
+      <span class="word">KYRI</span>
     </div>
   </section>
 
@@ -43,7 +43,7 @@
       <h2>Book from your phone.<br />Show up. Work.</h2>
     </div>
     <ol class="steps">
-      <li><b>01</b><div><h3>Get your login</h3><p>After your free trial, <span data-coach>Kyri</span> adds you to the roster with your goal and, if you fight, your martial art.</p></div></li>
+      <li><b>01</b><div><h3>Get your login</h3><p>After your free trial, Kyri adds you to the roster with your goal and, if you fight, your martial art.</p></div></li>
       <li><b>02</b><div><h3>Book your slots</h3><p>Open the athlete app and grab a 1-on-1 slot or a spot in a group class, up to a week ahead.</p></div></li>
       <li><b>03</b><div><h3>Track the work</h3><p>See your sessions, streak, fight record and billing in one place.</p></div></li>
     </ol>
@@ -59,9 +59,9 @@
     <div class="coach-mark"><span class="logo-mark"></span></div>
     <div>
       <p class="kicker">Your coach</p>
-      <h2 data-coach-full>Kyriakos Nicolaou</h2>
-      <p class="lead">Personal trainer specialising in strength and conditioning. <span data-coach>Kyri</span> builds the engine: fighters from Muay Thai, boxing, MMA and more train with him to get through every round, and non-fighters train with him to get fitter, stronger and leaner. Every session is planned around your goal.</p>
-      <a class="btn btn-ghost" data-ig target="_blank" rel="noopener" hidden>Follow on Instagram ↗</a>
+      <h2>Kyriakos Nicolaou</h2>
+      <p class="lead">Personal trainer specialising in strength and conditioning. Kyri builds the engine: fighters from Muay Thai, boxing, MMA and more train with him to get through every round, and non-fighters train with him to get fitter, stronger and leaner. Every session is planned around your goal.</p>
+      <a class="btn btn-ghost" href="https://www.instagram.com/trainwithkyri/" target="_blank" rel="noopener">Follow @trainwithkyri ↗</a>
     </div>
   </section>
 
@@ -69,7 +69,7 @@
     <div class="trial-copy">
       <p class="kicker">First session free</p>
       <h2>Ready to work?</h2>
-      <p>Tell <span data-coach>Kyri</span> what you're training for to set up your free trial session.</p>
+      <p>Tell Kyri what you're training for. He'll get back to you to set up your free trial session.</p>
     </div>
     <form class="trial-form" id="trial-form">
       <p class="invite span" id="invite" hidden></p>
@@ -85,9 +85,9 @@
   </section>
 
   <footer class="footer">
-    <div class="brand"><span class="logo-mark" style="width:24px;height:24px"></span><span>TrainHub</span></div>
-    <p>© <span id="yr"></span> <span data-biz>TrainHub</span> · <span data-coach-full>Kyriakos Nicolaou</span></p>
-    <nav><a data-ig target="_blank" rel="noopener" hidden>Instagram</a><a href="member.html">Athlete app</a><a href="app.html">Coach app</a></nav>
+    <div class="brand"><span class="logo-mark" style="width:24px;height:24px"></span><span>KYRI</span></div>
+    <p>© <span id="yr"></span> KYRI Training · Kyriakos Nicolaou</p>
+    <nav><a href="https://www.instagram.com/trainwithkyri/" target="_blank" rel="noopener">Instagram</a><a href="member.html">Athlete app</a><a href="app.html">Coach app</a></nav>
   </footer>
 
   <script type="module">
@@ -95,13 +95,6 @@
     import { esc, fmtTime } from "./js/ui.js";
     const d = db();
     document.getElementById("yr").textContent = new Date().getFullYear();
-    // Coach and business details come from Settings → Business profile.
-    const coach = d.academy.owner || "your coach";
-    document.querySelectorAll("[data-coach]").forEach((el) => (el.textContent = coach.split(" ")[0]));
-    document.querySelectorAll("[data-coach-full]").forEach((el) => (el.textContent = coach));
-    document.querySelectorAll("[data-biz]").forEach((el) => (el.textContent = d.academy.name));
-    const ig = (d.academy.instagram || "").replace(/^@/, "");
-    if (ig) document.querySelectorAll("[data-ig]").forEach((el) => { el.href = `https://www.instagram.com/${encodeURIComponent(ig)}/`; el.hidden = false; if (el.classList.contains("btn")) el.textContent = `Follow @${ig} ↗`; });
     const services = [["Fight conditioning", TYPE_TONE["Fighter conditioning"]], ["Strength & power", TYPE_TONE.Strength], ["Cardio", TYPE_TONE["Cardio / HIIT"]], ["HIIT", TYPE_TONE["Cardio / HIIT"]], ["Fight camps", TYPE_TONE["Fight camp"]], ["Weight loss", "#a7adb6"], ["Mobility", TYPE_TONE["Mobility & recovery"]], ["1-on-1 PT", "#f4f4f2"]];
     const arts = services.map(([n, c]) => `<span style="--dc:${c}">${esc(n)}</span>`).join("");
     document.getElementById("arts").innerHTML = arts + arts;
@@ -116,7 +109,7 @@
     document.getElementById("programs-list").innerHTML = d.groups.map((g, i) => `
       <article class="program ${i === 0 ? "featured" : ""}"><span class="num">0${i + 1}</span><h3>${esc(g.name)}</h3><p>${esc(blurbs[g.name] || "")}</p>
         <p class="price"><b>${money(g.price)}</b> / month</p><a href="#trial" class="btn ${i === 0 ? "btn-primary" : "btn-ghost"} full">Start with a free trial</a></article>`).join("") +
-      `<article class="program"><span class="num">0${d.groups.length + 1}</span><h3>Packs & fight camps</h3><p>${d.plans.filter((p) => p.interval === "pack").map((p) => `${esc(p.name)}: <b>${money(p.price)}</b>`).join("<br/>")}</p><a href="#trial" class="btn btn-ghost full">Ask ${esc(coach.split(" ")[0])}</a></article>`;
+      `<article class="program"><span class="num">0${d.groups.length + 1}</span><h3>Packs & fight camps</h3><p>${d.plans.filter((p) => p.interval === "pack").map((p) => `${esc(p.name)}: <b>${money(p.price)}</b>`).join("<br/>")}</p><a href="#trial" class="btn btn-ghost full">Ask Kyri</a></article>`;
 
     const order = [1, 2, 3, 4, 5, 6];
     document.getElementById("tt").innerHTML = order.map((day) => {
@@ -127,14 +120,14 @@
     // Invite links from the athlete app look like index.html?ref=<athleteId>#trial
     const ref = new URLSearchParams(location.search).get("ref");
     const inviter = ref && d.students.find((s) => s.id === ref && s.status !== "cancelled");
-    if (inviter) { const el = document.getElementById("invite"); el.hidden = false; el.innerHTML = `👋 <b>${esc(inviter.first)}</b> invited you to train with ${esc(coach.split(" ")[0])}`; }
+    if (inviter) { const el = document.getElementById("invite"); el.hidden = false; el.innerHTML = `👋 <b>${esc(inviter.first)}</b> invited you to train with Kyri`; }
 
     const form = document.getElementById("trial-form");
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const v = Object.fromEntries(new FormData(form));
       update((db) => db.leads.push({ id: uid("ld"), name: v.name, email: v.email, phone: v.phone, source: inviter ? "Referral" : "Website form", referredBy: inviter ? inviter.id : "", stage: "New", interest: v.interest, created: today(), trialDate: "", notes: `${v.art === "No, just fitness" ? "Fitness client" : "Fights: " + v.art}${v.goal ? " · " + v.goal : ""}` }));
-      form.innerHTML = `<div class="thanks span"><h3>Got it, ${esc(v.name.split(" ")[0])}.</h3><p>${esc(coach.split(" ")[0])} will be in touch to book your free session.</p><a class="btn btn-primary" href="app.html#/leads">See it in the coach app →</a></div>`;
+      form.innerHTML = `<div class="thanks span"><h3>Got it, ${esc(v.name.split(" ")[0])}.</h3><p>Kyri will be in touch to book your free session.</p><a class="btn btn-primary" href="app.html#/leads">See it in the coach app →</a></div>`;
     });
   </script>
 </body>

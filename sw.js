@@ -14,6 +14,6 @@ self.addEventListener("fetch", (e) => {
         if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
         return res;
       })
-      .catch(async () => (await caches.match(req, { ignoreSearch: true })) || new Response("You're offline. Connect to the internet and open the app again.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } }))
+      .catch(async () => (await caches.match(req, { ignoreSearch: true })) || new Response("You're offline. Connect to the internet and open KYRI again.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } }))
   );
 });

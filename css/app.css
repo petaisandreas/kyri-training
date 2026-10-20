@@ -320,7 +320,7 @@ input[type="search"].input { min-width: 220px; }
 }
 @media print { .sidebar, .topbar, .actions { display: none !important; } #view { padding: 0; } }
 
-/* ---------- TrainHub additions ---------- */
+/* ---------- KYRI additions ---------- */
 .class-block.is-solo { border-left-style: dashed; }
 .class-block.is-taken { background: color-mix(in srgb, var(--ink) 10%, var(--surface)); border-left-style: solid; }
 .disc-bars { display: flex; flex-direction: column; gap: 10px; }

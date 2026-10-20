@@ -3,7 +3,7 @@ import { esc, $, $$, athleteAvatar, badge, fmtDate, modal, field, toast, empty }
 
 let month = thisMonth();
 
-/** The coach awards an achievement (from the catalog in Settings, or a custom one) to an athlete. */
+/** Kyri awards an achievement (from the catalog in Settings, or a custom one) to an athlete. */
 export function awardAchievement(s) {
   const d = db();
   const types = d.academy.achievementTypes;
@@ -105,7 +105,7 @@ export default {
     $("[data-settings]", el).onclick = () => (location.hash = "#/settings");
     $("[data-prize]", el).onclick = () => modal({
       title: `Prize — ${monthLabel(month)}`, submit: "Save prize",
-      body: field("Prize", "prize", prizeFor(month), { required: true, placeholder: "e.g. Free PT session + gym t-shirt" }),
+      body: field("Prize", "prize", prizeFor(month), { required: true, placeholder: "e.g. Free PT session + KYRI t-shirt" }),
       onSubmit({ prize }) { update((d) => (d.prizes[month] = prize)); toast("Prize saved"); },
     });
     $("[data-given]", el) && ($("[data-given]", el).onclick = (e) => update((d) => (d.winners[month] = { studentId: e.target.dataset.given, given: true, date: today(), prize: prizeFor(month) })));

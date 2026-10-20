@@ -69,7 +69,7 @@ body.member { min-height: 100vh; }
 .m-dot { position: absolute; top: 0; right: -8px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
 
 .m-logo { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--ink); }
-.m-logo span:last-child { font: 500 20px/1 var(--display); letter-spacing: .3em; margin-right: -.3em; text-transform: uppercase; }
+.m-logo span:last-child { font: 500 20px/1 var(--display); letter-spacing: .5em; margin-right: -.5em; }
 .m-login h1 { text-transform: uppercase; letter-spacing: .04em; font-weight: 800; }
 .m-top .brand { color: var(--ink); }
 .m-discs { margin: 14px 0; }

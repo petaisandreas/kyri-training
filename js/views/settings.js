@@ -85,7 +85,7 @@ export default {
     $$("[data-rm-loc]", el).forEach((b) => (b.onclick = () => update((d) => d.academy.locations.splice(Number(b.dataset.rmLoc), 1))));
     $("[data-reset]", el).onclick = () => { if (confirm("Replace all data with the demo roster?")) { resetDemo(); toast("Demo data restored"); } };
     $("[data-backup]", el).onclick = () => {
-      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([JSON.stringify(db(), null, 2)], { type: "application/json" })), download: "trainhub-backup.json" });
+      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([JSON.stringify(db(), null, 2)], { type: "application/json" })), download: "kyri-backup.json" });
       a.click(); URL.revokeObjectURL(a.href);
     };
     $("[data-restore]", el).onchange = async (e) => {
@@ -94,7 +94,7 @@ export default {
         if (!data.students || !data.academy) throw new Error();
         update((d) => { Object.keys(d).forEach((k) => delete d[k]); Object.assign(d, data); });
         toast("Backup restored");
-      } catch { toast("That file isn't a TrainHub backup", "warn"); }
+      } catch { toast("That file isn't a KYRI backup", "warn"); }
     };
   },
 };

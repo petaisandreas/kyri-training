@@ -1,5 +1,5 @@
-// Athlete app: athletes sign in to book PT and conditioning sessions with their coach, see their training, and pay.
-import { db, update, subscribe, uid, today, iso, addDays, byId, money, classesOn, DAYS, docStatus, isBooked, bookedCount, recordText, isFighter, sessionColor, monthlyRanking, prizeFor, thisMonth, monthName, shiftMonth, referralsOf, fullName, coachFirst } from "./store.js";
+// Athlete app: athletes sign in to book PT and conditioning sessions with Kyri, see their training, and pay.
+import { db, update, subscribe, uid, today, iso, addDays, byId, money, classesOn, DAYS, docStatus, isBooked, bookedCount, recordText, isFighter, sessionColor, monthlyRanking, prizeFor, thisMonth, monthName, shiftMonth, referralsOf, fullName } from "./store.js";
 import { uploadDocument, viewDocument, DOC_LABEL } from "./docs-ui.js";
 import { esc, $, $$, discChips, badge, fmtDate, fmtTime, toast, empty, athleteAvatar, pickPhoto } from "./ui.js";
 
@@ -19,7 +19,7 @@ const demoAthlete = () => db().students.find((s) => s.status === "active" && isF
 function login() {
   const demo = demoAthlete();
   return `<div class="m-login">
-    <div class="m-logo">${logo(64)}<span>TrainHub</span></div>
+    <div class="m-logo">${logo(64)}<span>KYRI</span></div>
     <h1>Athlete sign in</h1>
     <p class="muted">Book your sessions with ${esc(db().academy.owner.split(" ")[0])}</p>
     <form id="login" class="m-card" novalidate>
@@ -151,7 +151,7 @@ function rank(s) {
   const link = inviteLink(s);
   const friends = referralsOf(s.id);
   const lastDay = new Date(Number(month.slice(0, 4)), Number(month.slice(5)), 0).getDate();
-  return `<h1 class="m-h1">${esc(monthName(month))} ranking</h1><p class="muted">Ends ${esc(monthName(month))} ${lastDay} · #1 wins ${esc(coachFirst())}'s prize</p>
+  return `<h1 class="m-h1">${esc(monthName(month))} ranking</h1><p class="muted">Ends ${esc(monthName(month))} ${lastDay} · #1 wins Kyri's prize</p>
   <div class="m-card m-prize"><span>🎁</span><div><small>This month's prize</small><b>${esc(prizeFor(month))}</b></div></div>
   <div class="m-card m-me-rank">
     <div class="m-rank-big">${me ? "#" + me.rank : "—"}</div>
@@ -168,7 +168,7 @@ function rank(s) {
     ${me && me.rank > 10 ? `<li class="row me"><span class="rank-no">${me.rank}</span>${athleteAvatar(s)}<span class="grow">You</span><b>${me.points}</b></li>` : ""}</ul></div>
   <h2 class="m-title">Bring a friend · +${R.referral} pts</h2>
   <div class="m-card m-invite">
-    <p>Share your link. When a friend signs up with ${esc(coachFirst())}, you get <b>+${R.referral} points</b>.</p>
+    <p>Share your link. When a friend signs up with Kyri, you get <b>+${R.referral} points</b>.</p>
     <input readonly value="${esc(link)}" data-link />
     <button class="btn btn-primary full" data-share>Share my invite link</button>
     ${friends.length ? `<small class="muted">Friends you've brought: ${friends.map((f) => esc(f.first)).join(", ")}</small>` : ""}
@@ -229,16 +229,16 @@ function pay(s) {
 // --- shell ----------------------------------------------------------------------
 function render() {
   const s = me();
-  if (!s) { setSession(null); root.innerHTML = login(); mountLogin(); document.title = "Sign in · TrainHub"; return; }
+  if (!s) { setSession(null); root.innerHTML = login(); mountLogin(); document.title = "Sign in · KYRI"; return; }
   const body = { home, book, rank, training, pay }[tab](s);
   const owed = db().invoices.filter((i) => i.studentId === s.id && i.status !== "paid").length;
   const scroll = window.scrollY;
   root.innerHTML = `
-    <header class="m-top"><div class="brand">${logo(26)}<span>TrainHub</span></div>
+    <header class="m-top"><div class="brand">${logo(26)}<span>KYRI</span></div>
       <button class="m-me" data-menu aria-label="Account">${athleteAvatar(s)}</button></header>
     <main class="m-main">${body}</main>
     <nav class="m-tabs">${TABS.map(([k, l, i]) => `<button data-tab="${k}" class="${tab === k ? "on" : ""}"><span>${i}${k === "pay" && owed ? `<i class="m-dot"></i>` : ""}</span>${l}</button>`).join("")}</nav>`;
-  document.title = `${TABS.find((t) => t[0] === tab)[1]} · TrainHub`;
+  document.title = `${TABS.find((t) => t[0] === tab)[1]} · KYRI`;
   window.scrollTo(0, scroll);
   mount(s);
 }
@@ -287,7 +287,7 @@ function mount(s) {
   on("[data-share]", async () => {
     const url = inviteLink(s);
     try {
-      if (navigator.share) await navigator.share({ title: `Train with ${coachFirst()}`, text: `${s.first} invited you to train with ${coachFirst()}. Your first session is free:`, url });
+      if (navigator.share) await navigator.share({ title: "Train with Kyri", text: `${s.first} invited you to train with Kyri. Your first session is free:`, url });
       else { await navigator.clipboard.writeText(url); toast("Invite link copied"); }
     } catch (e) { if (e?.name !== "AbortError") { $("[data-link]", root)?.select(); toast("Copy the link above to share it", "warn"); } }
   });
