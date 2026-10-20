@@ -1,5 +1,5 @@
-import { db, update, uid, today, iso, addDays, fullName, byId, markAttended, SESSION_TYPES, DISCIPLINE_NAMES, DAYS, TYPE_TONE, sessionColor } from "../store.js";
-import { esc, $, $$, fmtTime, fmtDate, modal, field, toast, discChips, badge, avatar, empty } from "../ui.js";
+import { db, update, uid, today, iso, addDays, fullName, byId, markAttended, SESSION_TYPES, DAYS, TYPE_TONE, sessionColor } from "../store.js";
+import { esc, athleteAvatar, $, $$, fmtTime, fmtDate, modal, field, toast, discChips, badge, avatar, empty } from "../ui.js";
 
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
 let weekOffset = 0;
@@ -17,13 +17,12 @@ export function openClassForm(c) {
     title: isNew ? "New session" : "Edit session",
     submit: isNew ? "Add session" : "Save",
     body: `<div class="form-grid">
-      ${field("Session name", "name", c?.name, { required: true, span: 2, placeholder: "e.g. Muay Thai Technique or 1-on-1 Session" })}
+      ${field("Session name", "name", c?.name, { required: true, span: 2, placeholder: "e.g. Fighter Conditioning or 1-on-1 PT" })}
       ${field("Day", "day", c?.day ?? 1, { options: ORDER.map((i) => [i, DAYS[i]]) })}
       ${field("Start time", "start", c?.start || "18:00", { type: "time", required: true })}
       ${field("Duration (min)", "duration", c?.duration || 60, { type: "number", min: 15, step: 15 })}
       ${field("Spots (1 = personal session)", "capacity", c?.capacity || 12, { type: "number", min: 1 })}
-      ${field("Type", "level", c?.level || "Striking", { options: SESSION_TYPES })}
-      ${field("Martial art", "discipline", c?.discipline || "", { options: [["", "Any / mixed"], ...DISCIPLINE_NAMES] })}
+      ${field("Type", "level", c?.level || "Fighter conditioning", { options: SESSION_TYPES })}
       ${field("Coach", "instructorId", c?.instructorId, { options: d.staff.map((s) => [s.id, s.name]) })}
       ${field("Location", "location", c?.location || d.academy.locations[0], { options: d.academy.locations })}
     </div>`,
@@ -64,7 +63,7 @@ function week() {
           return `<a class="class-block ${c.capacity === 1 ? "is-solo" : ""} ${c.capacity === 1 && booked ? "is-taken" : ""}" style="--lv:${sessionColor(c)}" href="#/schedule/class/${c.id}/${date}">
             <span class="cb-time">${fmtTime(c.start)} · ${c.duration}m</span>
             <b>${esc(c.name)}</b>
-            <span class="cb-meta">${esc(c.discipline || c.level)}${loc.length > 1 ? " · " + esc(c.location) : ""}</span>
+            <span class="cb-meta">${esc(c.level)}${loc.length > 1 ? " · " + esc(c.location) : ""}</span>
             <span class="cb-count">${c.capacity === 1 ? (date < t ? (n ? "✓ done" : "—") : booked ? "● " + esc(byId("students", d.bookings.find((b) => b.classId === c.id && b.date === date)?.studentId)?.first || "Booked") : "○ Open") : `${date < t ? `${n} trained` : `${booked} booked`} / ${c.capacity}`}</span>
           </a>`;
         }).join("") || `<div class="muted small pad">Rest day</div>`}
@@ -86,7 +85,7 @@ function roster(classId, date) {
   <a href="#/schedule" class="back">← Schedule</a>
   <div class="page-head">
     <div><p class="eyebrow">${fmtDate(date, { weekday: "long", month: "long", day: "numeric" })} · ${fmtTime(c.start)}</p><h1>${esc(c.name)}</h1>
-      <p class="muted">${esc(byId("staff", c.instructorId)?.name || "")} · ${esc(c.level)}${c.discipline ? " · " + esc(c.discipline) : ""} · ${c.duration} min</p></div>
+      <p class="muted">${esc(byId("staff", c.instructorId)?.name || "")} · ${esc(c.level)} · ${c.duration} min</p></div>
     <div class="actions"><button class="btn btn-ghost" data-edit>Edit session</button></div>
   </div>
   <div class="kpis kpis-3">
@@ -99,7 +98,7 @@ function roster(classId, date) {
     ${pool.map((s) => {
       const on = future ? booked.has(s.id) : present.has(s.id);
       return `<button class="roster-item ${on ? "on" : ""}" data-sid="${s.id}" data-name="${esc(fullName(s).toLowerCase())}">
-        ${avatar(fullName(s))}<span class="grow"><b>${esc(fullName(s))}</b>${discChips(s.disciplines, { max: 2 })}</span>
+        ${athleteAvatar(s)}<span class="grow"><b>${esc(fullName(s))}</b>${s.disciplines.length ? discChips(s.disciplines, { max: 2 }) : `<small class="muted">${esc(s.goal || s.level)}</small>`}</span>
         ${!future && booked.has(s.id) ? badge("booked", "info") : ""}<span class="tick">${on ? "✓" : ""}</span></button>`;
     }).join("")}
   </div>`;

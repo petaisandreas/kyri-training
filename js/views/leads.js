@@ -34,8 +34,8 @@ function convert(l) {
   update((d) => {
     d.students.push({
       id, first, last: rest.join(" ") || "-", email: l.email, phone: l.phone,
-      disciplines: DISCIPLINE_NAMES.includes(l.interest) ? [l.interest] : [], level: "Beginner", weightClass: "—", record: { w: 0, l: 0, d: 0 }, goal: l.interest || "",
-      joined: today(), status: "active", groupIds: [/1-on-1|PT/.test(l.interest) ? "gr_pt" : "gr_group"].filter((g) => d.groups.some((x) => x.id === g)),
+      disciplines: DISCIPLINE_NAMES.filter((n) => (l.notes || "").includes(n)), level: DISCIPLINE_NAMES.some((n) => (l.notes || "").includes(n)) ? "Recreational martial artist" : "Fitness client", weightClass: "—", record: { w: 0, l: 0, d: 0 }, goal: l.interest || "",
+      joined: today(), status: "active", groupIds: [/1-on-1|PT/.test(l.interest) ? "gr_pt" : /Fight/.test(l.interest) ? "gr_fight" : "gr_group"].filter((g) => d.groups.some((x) => x.id === g)),
       planId: (/1-on-1|PT/.test(l.interest) ? d.plans.find((p) => p.name.includes("1-on-1")) : d.plans.find((p) => p.name.includes("Group")))?.id || d.plans[0].id,
       waiver: false, password: DEMO_PASSWORD, notes: `Converted from lead (${l.source}).`, location: d.academy.locations[0],
     });

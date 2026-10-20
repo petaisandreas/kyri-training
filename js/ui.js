@@ -11,12 +11,41 @@ export function initials(name) {
   return esc(name.split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase());
 }
 
-export function avatar(name, color = "#3a3d42") {
-  return `<span class="avatar" style="--av:${color}">${initials(name)}</span>`;
+export function avatar(name, color = "#3a3d42", cls = "") {
+  return `<span class="avatar ${cls}" style="--av:${color}">${initials(name)}</span>`;
 }
 
-/** Martial-art chips for an athlete: discipline name with its color dot. */
-export function discChips(list = [], { max = 3 } = {}) {
+/** An athlete's photo, falling back to their initials. */
+export function athleteAvatar(s, cls = "") {
+  if (!s) return avatar("?", undefined, cls);
+  return s.photo ? `<img class="avatar avatar-img ${cls}" src="${esc(s.photo)}" alt="${esc(s.first)}" loading="lazy" />` : avatar(`${s.first} ${s.last}`, undefined, cls);
+}
+
+/** Opens the file/camera picker and resolves with a 320px square JPEG data URL (or null if cancelled). */
+export function pickPhoto() {
+  return new Promise((resolve) => {
+    const input = Object.assign(document.createElement("input"), { type: "file", accept: "image/*" });
+    input.onchange = () => {
+      const file = input.files[0];
+      if (!file) return resolve(null);
+      const img = new Image();
+      img.onload = () => {
+        const size = 320, side = Math.min(img.width, img.height);
+        const c = Object.assign(document.createElement("canvas"), { width: size, height: size });
+        c.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+        URL.revokeObjectURL(img.src);
+        resolve(c.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = () => { toast("That file isn't an image", "warn"); resolve(null); };
+      img.src = URL.createObjectURL(file);
+    };
+    input.click();
+  });
+}
+
+/** Martial-art chips for a fighter: discipline name with its color dot. Fitness clients have none. */
+export function discChips(list = [], { max = 3, none = "—" } = {}) {
+  if (!list.length) return none ? `<span class="muted small">${esc(none)}</span>` : "";
   const shown = list.slice(0, max), more = list.length - shown.length;
   return `<span class="discs">${shown.map((d) => `<span class="disc" style="--dc:${DISCIPLINES[d] || "#888"}">${esc(d)}</span>`).join("")}${more > 0 ? `<span class="disc disc-more">+${more}</span>` : ""}</span>`;
 }

@@ -1,7 +1,7 @@
-// Athlete app: athletes sign in to book sessions with Kyri, see their training and fight profile, and pay.
+// Athlete app: athletes sign in to book PT and conditioning sessions with Kyri, see their training, and pay.
 import { db, update, subscribe, uid, today, iso, addDays, byId, money, classesOn, DAYS, docStatus, isBooked, bookedCount, recordText, isFighter, sessionColor } from "./store.js";
 import { uploadDocument, viewDocument, DOC_LABEL } from "./docs-ui.js";
-import { esc, $, $$, discChips, badge, fmtDate, fmtTime, toast, empty } from "./ui.js";
+import { esc, $, $$, discChips, badge, fmtDate, fmtTime, toast, empty, athleteAvatar, pickPhoto } from "./ui.js";
 
 const SESSION = "kyri:member";
 const TABS = [["home", "Home", "⌂"], ["book", "Book", "▦"], ["training", "Training", "◉"], ["pay", "Billing", "€"]];
@@ -79,7 +79,7 @@ function streakWeeks(sid) {
 }
 const dayLabel = (date) => (date === today() ? "Today" : date === iso(addDays(new Date(), 1)) ? "Tomorrow" : fmtDate(date, { weekday: "long", month: "short", day: "numeric" }));
 const bookingRow = ({ b, c }) => `<div class="m-card m-class" style="--lv:${sessionColor(c)}"><div class="date-tile"><b>${new Date(b.date + "T12:00").getDate()}</b>${DAYS[new Date(b.date + "T12:00").getDay()]}</div>
-  <div class="grow"><b>${esc(c.name)}</b><small>${fmtTime(c.start)} · ${c.duration} min · ${esc(c.discipline || c.level)}</small></div>
+  <div class="grow"><b>${esc(c.name)}</b><small>${fmtTime(c.start)} · ${c.duration} min · ${esc(c.level)}</small></div>
   <button class="btn btn-sm btn-ghost" data-cancel="${b.id}">Cancel</button></div>`;
 
 // --- tabs -----------------------------------------------------------------------
@@ -93,10 +93,11 @@ function home(s) {
   const h = docStatus(s.id);
   return `
   <section class="m-hero">
-    <p class="eyebrow">Let's work,</p><h1>${esc(s.first)}</h1>
-    <div class="m-discs">${discChips(s.disciplines, { max: 9 })}</div>
+    <div class="m-hero-top"><div><p class="eyebrow">Let's work,</p><h1>${esc(s.first)}</h1></div>
+      <button class="photo-edit m-photo" data-photo title="Change photo">${athleteAvatar(s)}<span>${s.photo ? "Change" : "+ Photo"}</span></button></div>
+    ${s.disciplines.length ? `<div class="m-discs">${discChips(s.disciplines, { max: 9 })}</div>` : `<p class="m-goal">${esc(s.goal || "")}</p>`}
     <div class="m-profile">
-      <div><small>Level</small><b>${esc(s.level)}</b></div>
+      <div><small>Type</small><b>${esc(s.level)}</b></div>
       ${isFighter(s) || s.record?.w || s.record?.l ? `<div><small>Record</small><b class="record">${recordText(s)}</b></div>` : ""}
       ${s.weightClass && s.weightClass !== "—" ? `<div><small>Weight</small><b>${esc(s.weightClass)}</b></div>` : `<div><small>Goal</small><b>${esc(s.goal || "—")}</b></div>`}
     </div>
@@ -121,18 +122,18 @@ function home(s) {
 
 function book(s) {
   const all = upcoming(7);
-  const list = all.filter(({ c }) => !bookFilter || (bookFilter === "1-on-1" ? c.capacity === 1 : bookFilter === "mine" ? !c.discipline || s.disciplines.includes(c.discipline) : c.capacity > 1));
+  const list = all.filter(({ c }) => !bookFilter || (bookFilter === "1-on-1" ? c.capacity === 1 : c.capacity > 1));
   const byDate = {};
   list.forEach((x) => (byDate[x.date] ||= []).push(x));
   return `<h1 class="m-h1">Book a session</h1><p class="muted">Next 7 days · 1-on-1 slots are just you and the coach</p>
-  <div class="m-chips">${[["", "All"], ["1-on-1", "1-on-1 PT"], ["group", "Group classes"], ["mine", "My martial arts"]].map(([k, l]) => `<button data-bf="${k}" class="${bookFilter === k ? "on" : ""}">${l}</button>`).join("")}</div>
+  <div class="m-chips">${[["", "All"], ["1-on-1", "1-on-1 PT"], ["group", "Group sessions"]].map(([k, l]) => `<button data-bf="${k}" class="${bookFilter === k ? "on" : ""}">${l}</button>`).join("")}</div>
   ${Object.keys(byDate).length ? Object.entries(byDate).map(([date, items]) => `
     <h2 class="m-title">${dayLabel(date)}</h2>
     ${items.map(({ c, date }) => {
       const booked = isBooked(s.id, c.id, date), n = bookedCount(c.id, date), full = n >= c.capacity;
       const spots = c.capacity === 1 ? (booked ? "Your 1-on-1 slot" : full ? "Taken" : "Available") : `${c.capacity - n} of ${c.capacity} spots left`;
       return `<div class="m-card m-class m-slot ${c.capacity === 1 ? "solo" : ""}" style="--lv:${sessionColor(c)}"><span class="time">${fmtTime(c.start)}</span>
-        <div class="grow"><b>${esc(c.name)}</b><small>${esc(c.discipline || c.level)} · ${c.duration} min</small><small>${spots}</small></div>
+        <div class="grow"><b>${esc(c.name)}</b><small>${esc(c.level)} · ${c.duration} min</small><small>${spots}</small></div>
         ${booked ? `<button class="btn btn-sm m-booked" data-unbook="${c.id}|${date}">Booked ✓</button>` : `<button class="btn btn-sm btn-primary" data-book="${c.id}|${date}" ${full ? "disabled" : ""}>${full ? (c.capacity === 1 ? "Taken" : "Full") : "Book"}</button>`}</div>`;
     }).join("")}`).join("") : empty("No sessions match in the next 7 days.")}`;
 }
@@ -145,12 +146,13 @@ function training(s) {
     return hist.filter((a) => a.date > iso(start) && a.date <= iso(end)).length;
   }).reverse();
   const byArt = {};
-  hist.forEach((a) => { const c = byId("classes", a.classId); const k = c?.discipline || c?.level || "Other"; byArt[k] = (byArt[k] || 0) + 1; });
+  hist.forEach((a) => { const c = byId("classes", a.classId); const k = c?.level || "Other"; byArt[k] = (byArt[k] || 0) + 1; });
   return `<h1 class="m-h1">My training</h1>
   <div class="m-card">
-    <span class="eyebrow">Martial arts</span>
-    <div class="m-discs">${discChips(s.disciplines, { max: 9 })}</div>
-    <dl class="dl"><dt>Level</dt><dd>${esc(s.level)}</dd><dt>Weight class</dt><dd>${esc(s.weightClass || "—")}</dd><dt>Fight record</dt><dd>${s.record?.w || s.record?.l ? `<span class="record"><b>${s.record.w}W</b> · <i>${s.record.l}L</i>${s.record.d ? ` · ${s.record.d}D` : ""}</span>` : "No fights yet"}</dd><dt>Goal</dt><dd>${esc(s.goal || "—")}</dd></dl>
+    <span class="eyebrow">My goal</span>
+    <p class="big">${esc(s.goal || "—")}</p>
+    ${s.disciplines.length ? `<div class="m-discs">${discChips(s.disciplines, { max: 9 })}</div>` : ""}
+    <dl class="dl"><dt>Type</dt><dd>${esc(s.level)}</dd>${s.disciplines.length ? `<dt>Weight class</dt><dd>${esc(s.weightClass || "—")}</dd><dt>Fight record</dt><dd>${s.record?.w || s.record?.l ? `<span class="record"><b>${s.record.w}W</b> · <i>${s.record.l}L</i>${s.record.d ? ` · ${s.record.d}D` : ""}</span>` : "No fights yet"}</dd>` : ""}</dl>
   </div>
   <h2 class="m-title">Last 16 weeks</h2>
   <div class="m-card"><div class="heat m-heat">${weeks.map((n) => `<span title="${n} sessions" style="--l:${Math.min(1, n / 4)}"></span>`).join("")}</div>
@@ -159,6 +161,7 @@ function training(s) {
   <h2 class="m-title">My documents</h2>
   <div class="m-card flush"><ul class="list m-list">${d.documents.filter((x) => x.studentId === s.id).map((x) => `<li class="row"><button class="row-link" data-doc="${x.id}"><span class="grow">${esc(x.type)}<small>${x.expires ? (x.expires < today() ? "Expired " : "Valid until ") + fmtDate(x.expires) : "No expiry"}</small></span><span class="muted">View</span></button></li>`).join("") || `<li class="row muted">No documents on file</li>`}</ul></div>
   <button class="btn btn-ghost full" data-upload-doc>+ Upload a document</button>
+  <button class="btn btn-ghost full mt" data-photo>${s.photo ? "Change my photo" : "+ Add my photo"}</button>
   <h2 class="m-title">Recent sessions</h2>
   ${hist.length ? `<div class="m-card flush"><ul class="list m-list">${hist.slice(0, 12).map((a) => `<li class="row"><span class="grow">${esc(byId("classes", a.classId)?.name || "Session")}</span><small class="muted">${fmtDate(a.date, { month: "short", day: "numeric" })}</small></li>`).join("")}</ul></div>` : empty("No sessions yet — book your first one!")}`;
 }
@@ -186,7 +189,7 @@ function render() {
   const scroll = window.scrollY;
   root.innerHTML = `
     <header class="m-top"><div class="brand">${logo(26)}<span>KYRI</span></div>
-      <button class="m-me" data-menu aria-label="Account">${esc(s.first[0])}${esc(s.last[0] || "")}</button></header>
+      <button class="m-me" data-menu aria-label="Account">${athleteAvatar(s)}</button></header>
     <main class="m-main">${body}</main>
     <nav class="m-tabs">${TABS.map(([k, l, i]) => `<button data-tab="${k}" class="${tab === k ? "on" : ""}"><span>${i}${k === "pay" && owed ? `<i class="m-dot"></i>` : ""}</span>${l}</button>`).join("")}</nav>`;
   document.title = `${TABS.find((t) => t[0] === tab)[1]} · KYRI`;
@@ -234,6 +237,10 @@ function mount(s) {
     if (!confirm(`Pay ${money(i.amount)} for "${i.description}" with the card on file?\n\n(Demo — no real charge.)`)) return;
     update((d) => (d.invoices.find((x) => x.id === i.id).status = "paid"));
     toast("Payment received — thank you!");
+  });
+  on("[data-photo]", async () => {
+    const photo = await pickPhoto();
+    if (photo) { update((d) => (d.students.find((x) => x.id === s.id).photo = photo)); toast("Looking good — photo updated"); }
   });
   on("[data-upload-hc]", () => uploadDocument({ studentId: s.id, by: "member" }));
   on("[data-upload-doc]", () => uploadDocument({ studentId: s.id, by: "member" }));

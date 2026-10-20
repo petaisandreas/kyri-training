@@ -1,7 +1,7 @@
 import { db, update, uid, today, iso, addDays, fullName, byId, money, classesOn, docStatus, groupsOf, monthlyFee, paymentStatus, markPaid, DISCIPLINE_NAMES, LEVELS, WEIGHT_CLASSES, isFighter, recordText, bookedCount, isBooked, DEMO_PASSWORD } from "../store.js";
 import { uploadDocument, viewDocument, DOC_TONE, DOC_LABEL } from "../docs-ui.js";
 import { fmtSize } from "../files.js";
-import { esc, $, $$, discChips, badge, fmtDate, fmtTime, avatar, modal, field, toast, empty } from "../ui.js";
+import { esc, athleteAvatar, pickPhoto, $, $$, discChips, badge, fmtDate, fmtTime, avatar, modal, field, toast, empty } from "../ui.js";
 
 let filter = { q: "", status: "active", pay: "", group: "all", disc: "" };
 const STATUS_TONE = { active: "ok", frozen: "info", cancelled: "neutral" };
@@ -33,13 +33,13 @@ function studentForm(s = {}) {
     ${field("Last name", "last", s.last, { required: true })}
     ${field("Email (app login)", "email", s.email, { type: "email" })}
     ${field("Phone", "phone", s.phone)}
-    <div class="field span-2"><span>Martial arts</span><div class="group-picks">${DISCIPLINE_NAMES.map((n) => `<label class="check"><input type="checkbox" data-multi="1" name="disciplines" value="${esc(n)}" ${mine.includes(n) ? "checked" : ""}/> ${esc(n)}</label>`).join("")}</div></div>
-    ${field("Level", "level", s.level || "Beginner", { options: LEVELS })}
+    <div class="field span-2"><span>Martial arts they compete in (fighters only — leave empty for fitness clients)</span><div class="group-picks">${DISCIPLINE_NAMES.map((n) => `<label class="check"><input type="checkbox" data-multi="1" name="disciplines" value="${esc(n)}" ${mine.includes(n) ? "checked" : ""}/> ${esc(n)}</label>`).join("")}</div></div>
+    ${field("Client type", "level", s.level || "Fitness client", { options: LEVELS })}
     ${field("Weight class", "weightClass", s.weightClass || "—", { options: WEIGHT_CLASSES })}
     ${field("Fight record — wins", "w", s.record?.w ?? 0, { type: "number", min: 0 })}
     ${field("Losses", "l", s.record?.l ?? 0, { type: "number", min: 0 })}
     ${field("Draws", "dr", s.record?.d ?? 0, { type: "number", min: 0 })}
-    ${field("Main goal", "goal", s.goal || "", { placeholder: "Compete, fitness, fight camp…" })}
+    ${field("Main goal", "goal", s.goal || "", { placeholder: "Weight loss, fight conditioning, cardio…" })}
     ${field("Plan", "planId", s.planId, { options: d.plans.map((p) => [p.id, `${p.name} — ${money(p.price)}/${p.interval}`]) })}
     ${field("Status", "status", s.status || "active", { options: ["active", "frozen", "cancelled"] })}
     ${field("App password", "password", s.password || DEMO_PASSWORD, { required: true })}
@@ -64,7 +64,6 @@ export function openStudentForm(s) {
     onSubmit(v) {
       v.groupIds ||= [];
       v.disciplines ||= [];
-      if (!v.disciplines.length) { toast("Pick at least one martial art", "warn"); return false; }
       if (!v.groupIds.length) { toast("Pick at least one program", "warn"); return false; }
       v.record = { w: v.w || 0, l: v.l || 0, d: v.dr || 0 };
       delete v.w; delete v.l; delete v.dr;
@@ -84,7 +83,7 @@ function list() {
   const d = db();
   const q = filter.q.toLowerCase();
   const group = d.groups.find((g) => g.id === filter.group);
-  const inGroup = (st) => (filter.group === "all" || (st.groupIds || []).includes(filter.group)) && (!filter.disc || st.disciplines.includes(filter.disc));
+  const inGroup = (st) => (filter.group === "all" || (st.groupIds || []).includes(filter.group)) && (!filter.disc || (filter.disc === "none" ? !st.disciplines.length : filter.disc === "fighters" ? st.disciplines.length > 0 : st.disciplines.includes(filter.disc)));
   const base = d.students.filter((st) => inGroup(st) && (!filter.status || st.status === filter.status));
   const withPay = base.map((st) => ({ st, pay: paymentStatus(st) }));
   const rows = withPay.filter(({ st, pay }) => (!filter.pay || pay === filter.pay) && (!q || `${st.first} ${st.last} ${st.email} ${st.phone}`.toLowerCase().includes(q)))
@@ -122,16 +121,16 @@ function list() {
   <div class="toolbar">
     <input class="input" type="search" placeholder="Search name or phone…" value="${esc(filter.q)}" data-q />
     <div class="seg">${[["", "All"], ["paid", "Paid"], ["due", "Due soon"], ["overdue", "Overdue"]].map(([k, l]) => `<button data-pay="${k}" class="${filter.pay === k ? "on" : ""}">${l}${k ? ` <small>${payCount(k)}</small>` : ""}</button>`).join("")}</div>
-    <select class="input" data-disc><option value="">All martial arts</option>${DISCIPLINE_NAMES.map((n) => `<option ${filter.disc === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
+    <select class="input" data-disc><option value="">Everyone</option><option value="fighters" ${filter.disc === "fighters" ? "selected" : ""}>Martial artists</option><option value="none" ${filter.disc === "none" ? "selected" : ""}>Fitness clients</option>${DISCIPLINE_NAMES.map((n) => `<option ${filter.disc === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
     <select class="input" data-status>${[["active", "Active"], ["frozen", "Frozen"], ["cancelled", "Cancelled"], ["", "Any status"]].map(([k, l]) => `<option value="${k}" ${filter.status === k ? "selected" : ""}>${l}</option>`).join("")}</select>
   </div>
   <div class="card flush">
     ${rows.length ? `<table class="table">
-      <thead><tr><th>Athlete</th><th class="hide-sm">Martial arts</th><th class="hide-sm">Level</th><th>${esc(month)}</th><th></th></tr></thead>
+      <thead><tr><th>Athlete</th><th class="hide-sm">Martial art</th><th class="hide-sm">Type / goal</th><th>${esc(month)}</th><th></th></tr></thead>
       <tbody>${rows.map(({ st, pay }) => `<tr data-href="#/students/${st.id}">
-          <td><span class="who">${avatar(fullName(st))}<span><b>${esc(fullName(st))}</b><small>${esc(st.phone || st.email)}</small></span></span></td>
+          <td><span class="who">${athleteAvatar(st)}<span><b>${esc(fullName(st))}</b><small>${esc(st.phone || st.email)}</small></span></span></td>
           <td class="hide-sm">${discChips(st.disciplines)}</td>
-          <td class="hide-sm"><b class="small">${esc(st.level)}</b>${isFighter(st) ? `<small class="record">${recordText(st)}</small>` : `<small>${groupsOf(st).map((g) => esc(g.name)).join(" + ")}</small>`}</td>
+          <td class="hide-sm"><b class="small">${esc(st.level)}</b>${isFighter(st) ? `<small><span class="record">${recordText(st)}</span> · ${esc(st.goal || "")}</small>` : `<small>${esc(st.goal || "")}</small>`}</td>
           <td>${st.status === "active" ? badge(PAY_LABEL[pay], PAY_TONE[pay]) : badge(st.status, STATUS_TONE[st.status])}</td>
           <td class="right">${st.status === "active" && pay !== "paid" ? `<button class="btn btn-sm btn-primary" data-paid="${st.id}">Mark paid · ${money(monthlyFee(st))}</button>` : ""}</td></tr>`).join("")}</tbody></table>` : empty("No athletes match these filters.")}
   </div>`;
@@ -174,11 +173,11 @@ function detail(id) {
   return `
   <a href="#/students" class="back">← Athletes</a>
   <div class="profile-head card">
-    ${avatar(fullName(s))}
+    <button class="photo-edit" data-photo title="Change photo">${athleteAvatar(s)}<span>${s.photo ? "Change" : "+ Photo"}</span></button>
     <div class="grow">
       <h1>${esc(fullName(s))}</h1>
       <p class="muted">${groupsOf(s).map((g) => esc(g.name)).join(" + ")} · Training since ${fmtDate(s.joined)}</p>
-      <div class="row gap">${discChips(s.disciplines, { max: 9 })} ${badge(s.status, STATUS_TONE[s.status])} ${s.status === "active" ? badge(new Date().toLocaleString("en-US", { month: "long" }) + ": " + PAY_LABEL[pay], PAY_TONE[pay]) : ""} ${s.waiver ? badge("Waiver on file", "ok") : badge("Waiver missing", "warn")} ${(() => { const h = docStatus(s.id); return badge("Medical: " + DOC_LABEL[h.status].toLowerCase(), DOC_TONE[h.status]); })()}</div>
+      <div class="row gap">${discChips(s.disciplines, { max: 9, none: "" })} ${badge(s.status, STATUS_TONE[s.status])} ${s.status === "active" ? badge(new Date().toLocaleString("en-US", { month: "long" }) + ": " + PAY_LABEL[pay], PAY_TONE[pay]) : ""} ${s.waiver ? badge("Waiver on file", "ok") : badge("Waiver missing", "warn")} ${(() => { const h = docStatus(s.id); return badge("Medical: " + DOC_LABEL[h.status].toLowerCase(), DOC_TONE[h.status]); })()}</div>
     </div>
     <div class="actions col">
       ${unpaid ? `<button class="btn btn-primary" data-paid="${s.id}">Mark paid · ${money(monthlyFee(s))}</button>` : ""}
@@ -189,10 +188,10 @@ function detail(id) {
 
   <div class="grid grid-3">
     <section class="card">
-      <header class="card-head"><h2>Fighter profile</h2></header>
-      <p class="big">${esc(s.level)}</p>
-      <dl class="dl"><dt>Martial arts</dt><dd>${esc(s.disciplines.join(", ") || "—")}</dd><dt>Weight class</dt><dd>${esc(s.weightClass || "—")}</dd>
-        <dt>Record</dt><dd>${s.record?.w || s.record?.l || s.record?.d ? `<span class="record"><b>${s.record.w}W</b> · <i>${s.record.l}L</i>${s.record.d ? ` · ${s.record.d}D` : ""}</span>` : "No fights yet"}</dd><dt>Goal</dt><dd>${esc(s.goal || "—")}</dd></dl>
+      <header class="card-head"><h2>${s.disciplines.length ? "Fighter profile" : "Client profile"}</h2></header>
+      <p class="big">${esc(s.goal || s.level)}</p>
+      <dl class="dl"><dt>Type</dt><dd>${esc(s.level)}</dd>${s.disciplines.length ? `<dt>Martial arts</dt><dd>${esc(s.disciplines.join(", "))}</dd><dt>Weight class</dt><dd>${esc(s.weightClass || "—")}</dd>
+        <dt>Record</dt><dd>${s.record?.w || s.record?.l || s.record?.d ? `<span class="record"><b>${s.record.w}W</b> · <i>${s.record.l}L</i>${s.record.d ? ` · ${s.record.d}D` : ""}</span>` : "No fights yet"}</dd>` : ""}</dl>
     </section>
     <section class="card">
       <header class="card-head"><h2>Plan</h2></header>
@@ -283,6 +282,11 @@ export default {
       $("[data-doc-upload]", el).onclick = () => uploadDocument({ studentId: id });
       $$("[data-doc]", el).forEach((tr) => (tr.onclick = () => viewDocument(db().documents.find((x) => x.id === tr.dataset.doc))));
       $("[data-book]", el).onclick = () => bookFor(s);
+      $("[data-photo]", el).onclick = async () => {
+        if (s.photo && !confirm(`Replace ${s.first}'s photo?\n\n(Cancel to keep it.)`)) return;
+        const photo = await pickPhoto();
+        if (photo) { update((d) => (d.students.find((x) => x.id === s.id).photo = photo)); toast("Photo updated"); }
+      };
       $$("[data-unbook]", el).forEach((b) => (b.onclick = () => { update((d) => (d.bookings = d.bookings.filter((x) => x.id !== b.dataset.unbook))); toast("Booking cancelled", "warn"); }));
       $$("[data-del-att]", el).forEach((b) => (b.onclick = () => update((d) => (d.attendance = d.attendance.filter((a) => a.id !== b.dataset.delAtt)))));
       return;

@@ -1,7 +1,7 @@
 import { db, update, uid, today, fullName, money } from "../store.js";
 import { esc, $$, modal, field, toast, fmtDate, badge, progress, empty } from "../ui.js";
 
-const TONE = { Fight: "danger", "Sparring day": "warn", Seminar: "info", "Weigh-in": "neutral", Social: "neutral" };
+const TONE = { "Athlete fight": "danger", Bootcamp: "warn", "Fitness test": "info", Workshop: "ok", Social: "neutral" };
 
 function eventForm(e) {
   const isNew = !e;
@@ -9,7 +9,7 @@ function eventForm(e) {
     title: isNew ? "New event" : e.title,
     body: `<div class="form-grid">
       ${field("Title", "title", e?.title, { required: true, span: 2 })}
-      ${field("Type", "type", e?.type || "Seminar", { options: ["Fight", "Sparring day", "Seminar", "Weigh-in", "Social"] })}
+      ${field("Type", "type", e?.type || "Bootcamp", { options: ["Athlete fight", "Bootcamp", "Fitness test", "Workshop", "Social"] })}
       ${field("Date", "date", e?.date || today(), { type: "date", required: true })}
       ${field("Start time", "time", e?.time || "12:00", { type: "time" })}
       ${field("Price", "price", e?.price ?? 0, { type: "number", min: 0, step: "0.01" })}
@@ -58,7 +58,7 @@ export default {
         <h3>${esc(e.title)}</h3><p class="muted">${e.price ? money(e.price) : "Free"} · ${e.registrations.length}/${e.capacity} registered</p>${progress(e.registrations.length / e.capacity)}</div>
       <div class="actions col"><button class="btn btn-sm btn-primary" data-reg="${e.id}">Registrations</button><button class="btn btn-sm btn-ghost" data-edit="${e.id}">Edit</button></div></section>`;
     return `
-    <div class="page-head"><div><p class="eyebrow">Training</p><h1>Fights & events</h1><p class="muted">Fight nights, sparring days and seminars.</p></div>
+    <div class="page-head"><div><p class="eyebrow">Training</p><h1>Fights & events</h1><p class="muted">Your fighters' fight nights, plus bootcamps, fitness tests and workshops.</p></div>
       <div class="actions"><button class="btn btn-primary" data-new>+ New event</button></div></div>
     <h2 class="section-title">Upcoming</h2>${up.map(card).join("") || empty("No upcoming events.")}
     ${past.length ? `<h2 class="section-title">Past</h2>${past.map(card).join("")}` : ""}`;

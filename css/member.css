@@ -85,3 +85,9 @@ body.member { min-height: 100vh; }
 .m-card { border-radius: 8px; }
 .m-chips button.on { background: var(--ink); color: var(--bg); }
 .m-card .dl { margin-top: 4px; }
+.m-me { padding: 0; overflow: hidden; }
+.m-me .avatar { width: 100%; height: 100%; border-radius: 0; }
+.m-hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.m-photo .avatar { width: 76px; height: 76px; font-size: 24px; border: 2px solid #262629; }
+.m-photo span { opacity: 1; font-size: 10px; }
+.m-goal { margin: 12px 0; color: #c9c9c6; font-size: 14px; }

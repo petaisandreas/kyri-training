@@ -1,5 +1,5 @@
-import { db, today, iso, addDays, money, fullName, byId, classesOn, DAYS, docStatus, paymentStatus, DISCIPLINES, DISCIPLINE_NAMES, isFighter, recordText } from "../store.js";
-import { esc, barChart, fmtTime, avatar, badge, progress } from "../ui.js";
+import { db, today, iso, addDays, money, fullName, byId, classesOn, DAYS, docStatus, paymentStatus, DISCIPLINES, DISCIPLINE_NAMES, LEVELS, isFighter, recordText } from "../store.js";
+import { esc, barChart, fmtTime, athleteAvatar, badge, progress } from "../ui.js";
 
 export default {
   title: "Dashboard",
@@ -22,6 +22,9 @@ export default {
 
     const todays = classesOn(t);
     const fighters = active.filter(isFighter).sort((a, b) => (b.record.w - b.record.l) - (a.record.w - a.record.l)).slice(0, 6);
+    const LEVEL_TONE = { "Fitness client": "#a7adb6", "Recreational martial artist": "#c9a227", "Amateur fighter": "#e07b2e", "Pro fighter": "#d64545" };
+    const types = LEVELS.map((n) => ({ n, c: active.filter((s) => s.level === n).length }));
+    const maxType = Math.max(1, ...types.map((x) => x.c));
     const mix = DISCIPLINE_NAMES.map((n) => ({ n, c: active.filter((s) => s.disciplines.includes(n)).length })).filter((x) => x.c).sort((a, b) => b.c - a.c);
     const maxMix = Math.max(1, ...mix.map((x) => x.c));
     const upcoming = d.events.filter((e) => e.date >= t).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
@@ -50,7 +53,7 @@ export default {
         ${todays.length ? `<ul class="list">${todays.map((c) => {
           const booked = d.bookings.filter((b) => b.classId === c.id && b.date === t);
           const who = c.capacity === 1 ? (booked[0] ? esc(fullName(byId("students", booked[0].studentId))) : "Open slot") : `${booked.length}/${c.capacity} booked`;
-          return `<li><a href="#/schedule/class/${c.id}/${t}" class="row-link"><span class="time">${fmtTime(c.start)}</span><span class="grow"><b>${esc(c.name)}</b><small>${esc(c.discipline || c.level)} · ${c.duration} min</small></span><span class="count">${who}</span></a></li>`;
+          return `<li><a href="#/schedule/class/${c.id}/${t}" class="row-link"><span class="time">${fmtTime(c.start)}</span><span class="grow"><b>${esc(c.name)}</b><small>${esc(c.level)} · ${c.duration} min</small></span><span class="count">${who}</span></a></li>`;
         }).join("")}</ul>` : `<p class="muted">Rest day — nothing scheduled.</p>`}
       </section>
     </div>
@@ -73,11 +76,13 @@ export default {
 
     <div class="grid grid-3">
       <section class="card">
-        <header class="card-head"><h2>Martial arts</h2><small class="muted">Active athletes</small></header>
-        <div class="disc-bars">${mix.map(({ n, c }) => `<div class="disc-bar" style="--dc:${DISCIPLINES[n]}"><span>${esc(n)}</span><span class="track"><span style="width:${(c / maxMix) * 100}%"></span></span><b>${c}</b></div>`).join("")}</div>
+        <header class="card-head"><h2>Who you train</h2><small class="muted">Active athletes</small></header>
+        <div class="disc-bars">${types.map(({ n, c }) => `<div class="disc-bar" style="--dc:${LEVEL_TONE[n]}"><span>${esc(n.replace("Recreational martial artist", "Recreational MA"))}</span><span class="track"><span style="width:${(c / maxType) * 100}%"></span></span><b>${c}</b></div>`).join("")}</div>
+        <p class="eyebrow mt">Martial arts your fighters compete in</p>
+        <div class="discs">${mix.map(({ n, c }) => `<span class="disc" style="--dc:${DISCIPLINES[n]}">${esc(n)} · ${c}</span>`).join("")}</div>
       </section>
       <section class="card">
-        <header class="card-head"><h2>Fight team</h2><a href="#/students" class="link">All →</a></header>
+        <header class="card-head"><h2>Fighters</h2><a href="#/students" class="link">All →</a></header>
         ${fighters.length ? `<ul class="list">${fighters.map((s) => `<li class="row"><a href="#/students/${s.id}" class="grow">${esc(fullName(s))}<small>${esc(s.weightClass)} · ${esc(s.disciplines.join(" / "))}</small></a><span class="record">${recordText(s)}</span></li>`).join("")}</ul>` : `<p class="muted">No competing fighters yet.</p>`}
       </section>
       <section class="card">
@@ -85,7 +90,6 @@ export default {
         <ul class="list">
           <li class="row"><a class="grow" href="#/billing">Unpaid / failed invoices</a>${badge(outstanding.length, outstanding.length ? "warn" : "ok")}</li>
           <li class="row"><a class="grow" href="#/documents">Medical clearances to renew</a>${(() => { const n = active.filter((s) => docStatus(s.id).status !== "valid").length; return badge(n, n ? "danger" : "ok"); })()}</li>
-          <li class="row"><a class="grow" href="#/documents">Fight licenses expiring</a>${(() => { const n = active.filter(isFighter).filter((s) => docStatus(s.id, "Fight license").status !== "valid").length; return badge(n, n ? "warn" : "ok"); })()}</li>
           <li class="row"><span class="grow">Missing waivers</span>${badge(active.filter((s) => !s.waiver).length, "warn")}</li>
           <li class="row"><a class="grow" href="#/leads">New leads to contact</a>${badge(d.leads.filter((l) => l.stage === "New").length, "info")}</li>
         </ul>
@@ -101,7 +105,7 @@ export default {
         <header class="card-head"><h2>Upcoming bookings</h2></header>
         <div class="chips">${recentBookings.map((b) => {
           const s = byId("students", b.studentId), c = byId("classes", b.classId);
-          return s && c ? `<a class="chip" href="#/students/${s.id}">${avatar(fullName(s))}<span>${esc(s.first)}<small>${esc(c.name)} · ${DAYS[new Date(b.date + "T12:00").getDay()]} ${fmtTime(c.start)}</small></span></a>` : "";
+          return s && c ? `<a class="chip" href="#/students/${s.id}">${athleteAvatar(s)}<span>${esc(s.first)}<small>${esc(c.name)} · ${DAYS[new Date(b.date + "T12:00").getDay()]} ${fmtTime(c.start)}</small></span></a>` : "";
         }).join("") || `<p class="muted">No bookings yet.</p>`}</div>
       </section>
     </div>`;

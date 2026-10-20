@@ -1,5 +1,5 @@
 import { db, fullName, byId, docStatus, REQUIRED_DOCS, DOC_TYPES } from "../store.js";
-import { esc, $, $$, badge, fmtDate, avatar, empty } from "../ui.js";
+import { esc, athleteAvatar, $, $$, badge, fmtDate, avatar, empty } from "../ui.js";
 import { uploadDocument, viewDocument, DOC_TONE, DOC_LABEL } from "../docs-ui.js";
 import { fmtSize } from "../files.js";
 
@@ -32,7 +32,7 @@ function render() {
     </div>
     <div class="card flush">${shown.length ? `<table class="table"><thead><tr><th>Athlete</th><th>${esc(req)}</th><th class="hide-sm">Valid until</th><th></th></tr></thead><tbody>
       ${shown.map(({ s, status, doc }) => `<tr>
-        <td><a class="who" href="#/students/${s.id}">${avatar(fullName(s))}<span><b>${esc(fullName(s))}</b><small>${esc(s.phone)}</small></span></a></td>
+        <td><a class="who" href="#/students/${s.id}">${athleteAvatar(s)}<span><b>${esc(fullName(s))}</b><small>${esc(s.phone)}</small></span></a></td>
         <td>${badge(DOC_LABEL[status], DOC_TONE[status])}</td>
         <td class="hide-sm">${doc?.expires ? fmtDate(doc.expires) : "—"}</td>
         <td class="right">${doc ? `<button class="btn btn-sm btn-ghost" data-view="${doc.id}">View</button> ` : ""}<button class="btn btn-sm ${status === "valid" ? "btn-ghost" : "btn-primary"}" data-upload="${s.id}">${status === "none" ? "Upload" : "Renew"}</button></td></tr>`).join("")}
