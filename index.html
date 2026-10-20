@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#000000" />
+  <title>KYRI Training — Personal training for fighters</title>
+  <meta name="description" content="Personal training and fight preparation with Kyriakos Nicolaou. Muay Thai, boxing, kickboxing, MMA and strength & conditioning. Book your sessions online." />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/site.css" />
+</head>
+<body class="site">
+  <header class="nav">
+    <a href="#" class="brand"><span class="logo-mark" style="width:30px;height:30px"></span><span>KYRI</span></a>
+    <nav class="nav-links"><a href="#programs">Programs</a><a href="#timetable">Timetable</a><a href="#coach">Coach</a><a href="#trial">Free trial</a></nav>
+    <div class="nav-cta"><a href="app.html" class="btn btn-ghost">Coach</a><a href="member.html" class="btn btn-primary">Book a session</a></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="kicker">Personal training · Fight preparation</p>
+      <h1>Train like<br />a fighter.</h1>
+      <p class="lead">1-on-1 coaching and small-group sessions with Kyriakos Nicolaou. Whatever your martial art, you get a plan built around it, whether you're stepping into the ring or just want to move and hit like you mean it.</p>
+      <div class="hero-cta"><a href="member.html" class="btn btn-primary btn-lg">Book your session</a><a href="#trial" class="btn btn-ghost btn-lg">Free trial →</a></div>
+    </div>
+    <div class="hero-mark" aria-hidden="true">
+      <span class="logo-mark"></span>
+      <span class="word">KYRI</span>
+    </div>
+  </section>
+
+  <div class="marquee" aria-label="Martial arts we train"><div id="arts"></div></div>
+
+  <section id="programs" class="section">
+    <header class="section-head"><p class="kicker">Programs</p><h2>Pick your path.</h2></header>
+    <div class="programs" id="programs-list"></div>
+  </section>
+
+  <section class="section split">
+    <div>
+      <p class="kicker">How it works</p>
+      <h2>Book from your phone.<br />Show up. Work.</h2>
+    </div>
+    <ol class="steps">
+      <li><b>01</b><div><h3>Get your login</h3><p>After your trial, Kyri adds you to the roster with your martial arts and goals.</p></div></li>
+      <li><b>02</b><div><h3>Book your slots</h3><p>Open the athlete app and grab a 1-on-1 slot or a spot in a group class, up to a week ahead.</p></div></li>
+      <li><b>03</b><div><h3>Track the work</h3><p>See your sessions, streak, fight record and billing in one place.</p></div></li>
+    </ol>
+  </section>
+
+  <section id="timetable" class="section">
+    <header class="section-head"><p class="kicker">Timetable</p><h2>This week at the gym.</h2><p>Dashed slots are 1-on-1 personal sessions. Book them in the app.</p></header>
+    <div class="tt" id="tt"></div>
+    <p class="center"><a href="member.html" class="btn btn-primary btn-lg">Open the athlete app</a></p>
+  </section>
+
+  <section id="coach" class="section coach">
+    <div class="coach-mark"><span class="logo-mark"></span></div>
+    <div>
+      <p class="kicker">Your coach</p>
+      <h2>Kyriakos Nicolaou</h2>
+      <p class="lead">Personal trainer and fight coach. Kyri trains fighters across striking and grappling, from first-timers to athletes preparing for fight night. Every session is planned around your discipline, your weight class and your next goal.</p>
+      <a class="btn btn-ghost" href="https://www.instagram.com/trainwithkyri/" target="_blank" rel="noopener">Follow @trainwithkyri ↗</a>
+    </div>
+  </section>
+
+  <section id="trial" class="section trial">
+    <div class="trial-copy">
+      <p class="kicker">First session free</p>
+      <h2>Ready to work?</h2>
+      <p>Tell Kyri what you train and what you're after. He'll get back to you to set up your free trial session.</p>
+    </div>
+    <form class="trial-form" id="trial-form">
+      <label><span>Name *</span><input name="name" required /></label>
+      <label><span>Phone *</span><input name="phone" type="tel" required /></label>
+      <label class="span"><span>Email *</span><input name="email" type="email" required /></label>
+      <label><span>Martial art *</span><select name="interest" required id="interest"></select></label>
+      <label><span>Experience</span><select name="exp"><option>Never trained</option><option>Some experience</option><option>Amateur fighter</option><option>Pro fighter</option></select></label>
+      <label class="span"><span>Your goal</span><input name="goal" placeholder="e.g. first fight, get fit, sharpen my boxing" /></label>
+      <button class="btn btn-primary btn-lg span">Request free trial</button>
+      <p class="fine span">Demo: submitting adds a lead to the coach dashboard so you can see it arrive.</p>
+    </form>
+  </section>
+
+  <footer class="footer">
+    <div class="brand"><span class="logo-mark" style="width:24px;height:24px"></span><span>KYRI</span></div>
+    <p>© <span id="yr"></span> KYRI Training · Kyriakos Nicolaou</p>
+    <nav><a href="https://www.instagram.com/trainwithkyri/" target="_blank" rel="noopener">Instagram</a><a href="member.html">Athlete app</a><a href="app.html">Coach app</a></nav>
+  </footer>
+
+  <script type="module">
+    import { db, update, uid, today, money, DISCIPLINE_NAMES, DISCIPLINES, DAYS, sessionColor } from "./js/store.js";
+    import { esc, fmtTime } from "./js/ui.js";
+    const d = db();
+    document.getElementById("yr").textContent = new Date().getFullYear();
+    const arts = DISCIPLINE_NAMES.map((n) => `<span style="--dc:${DISCIPLINES[n]}">${esc(n)}</span>`).join("");
+    document.getElementById("arts").innerHTML = arts + arts;
+    document.getElementById("interest").innerHTML = [...DISCIPLINE_NAMES, "1-on-1 PT", "Fight camp", "Not sure yet"].map((n) => `<option>${esc(n)}</option>`).join("");
+
+    const blurbs = {
+      "1-on-1 PT": "Just you and the coach. Technique, pads, conditioning, built around your martial art and schedule.",
+      "Fight Team": "For competing fighters: sparring, fight prep, weight management and corner support on fight night.",
+      "Group Classes": "Small-group striking, grappling and S&C sessions. Hard work, good people, coached properly.",
+    };
+    document.getElementById("programs-list").innerHTML = d.groups.map((g, i) => `
+      <article class="program ${i === 0 ? "featured" : ""}"><span class="num">0${i + 1}</span><h3>${esc(g.name)}</h3><p>${esc(blurbs[g.name] || "")}</p>
+        <p class="price"><b>${money(g.price)}</b> / month</p><a href="#trial" class="btn ${i === 0 ? "btn-primary" : "btn-ghost"} full">Start with a free trial</a></article>`).join("") +
+      `<article class="program"><span class="num">0${d.groups.length + 1}</span><h3>Packs & fight camps</h3><p>${d.plans.filter((p) => p.interval === "pack").map((p) => `${esc(p.name)}: <b>${money(p.price)}</b>`).join("<br/>")}</p><a href="#trial" class="btn btn-ghost full">Ask Kyri</a></article>`;
+
+    const order = [1, 2, 3, 4, 5, 6];
+    document.getElementById("tt").innerHTML = order.map((day) => {
+      const cls = d.classes.filter((c) => c.day === day).sort((a, b) => a.start.localeCompare(b.start));
+      return `<div class="tt-col"><h3>${DAYS[day]}</h3>${cls.map((c) => `<div class="tt-item ${c.capacity === 1 ? "solo" : ""}" style="--lv:${sessionColor(c)}"><span>${fmtTime(c.start)}</span><b>${esc(c.capacity === 1 ? "1-on-1" : c.name)}</b></div>`).join("")}</div>`;
+    }).join("");
+
+    const form = document.getElementById("trial-form");
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const v = Object.fromEntries(new FormData(form));
+      update((db) => db.leads.push({ id: uid("ld"), name: v.name, email: v.email, phone: v.phone, source: "Website form", stage: "New", interest: v.interest, created: today(), trialDate: "", notes: `${v.exp}${v.goal ? " · " + v.goal : ""}` }));
+      form.innerHTML = `<div class="thanks span"><h3>Got it, ${esc(v.name.split(" ")[0])}.</h3><p>Kyri will be in touch to book your free session.</p><a class="btn btn-primary" href="app.html#/leads">See it in the coach app →</a></div>`;
+    });
+  </script>
+</body>
+</html>
