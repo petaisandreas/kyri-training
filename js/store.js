@@ -1,7 +1,7 @@
 // Data layer: a single JSON document in localStorage, seeded with a demo roster of fighters and fitness clients.
 const KEY = "kyri:v3";
 
-/** Martial arts a fighter competes in (trained elsewhere — Kyri does their conditioning). Colors are used for chips. */
+/** Martial arts a fighter competes in (trained elsewhere — the coach does their conditioning). Colors are used for chips. */
 export const DISCIPLINES = {
   "Muay Thai": "#d64545", Boxing: "#c9a227", Kickboxing: "#e07b2e", MMA: "#8a8f98",
   BJJ: "#3d6fd6", Wrestling: "#3c9a6b", Judo: "#6b4fc4", Karate: "#b8b8b8", Taekwondo: "#2aa5b8",
@@ -186,7 +186,7 @@ function seed() {
 
   const automations = [
     { id: uid("au"), name: "New enquiry welcome", trigger: "Lead created", enabled: true, steps: [
-      { delay: 0, channel: "Email", text: "Thanks for reaching out! Here's how to book your free trial PT session with Kyri." },
+      { delay: 0, channel: "Email", text: "Thanks for reaching out! Here's how to book your free trial PT session." },
       { delay: 2, channel: "SMS", text: "Ready to train? Reply with a day that works and I'll hold a spot for you." },
       { delay: 7, channel: "Email", text: "What to bring to your first session: trainers, a towel and plenty of water." } ] },
     { id: uid("au"), name: "Trial follow-up", trigger: "Trial class attended", enabled: true, steps: [
@@ -195,7 +195,7 @@ function seed() {
     { id: uid("au"), name: "Fight week check-in", trigger: "7 days before a fight", enabled: true, steps: [
       { delay: 0, channel: "SMS", text: "Fight week. We taper the conditioning now: stick to the weight plan, sleep, and stay sharp." } ] },
     { id: uid("au"), name: "Monthly winner", trigger: "Monthly ranking winner", enabled: true, steps: [
-      { delay: 0, channel: "SMS", text: "You finished #1 in this month's KYRI ranking! Your prize is waiting at the gym." } ] },
+      { delay: 0, channel: "SMS", text: "You finished #1 in this month's ranking! Your prize is waiting at the gym." } ] },
     { id: uid("au"), name: "We miss you", trigger: "No session for 14 days", enabled: true, steps: [
       { delay: 0, channel: "Email", text: "Haven't seen you in a while. Here's this week's timetable, so book a session." } ] },
   ];
@@ -210,7 +210,7 @@ function seed() {
   Object.assign(leads[0], { source: "Referral", referredBy: students[1].id, stage: "Trial booked", trialDate: iso(addDays(now, 2)) });
   Object.assign(leads[1], { source: "Referral", referredBy: students[4].id, stage: "New" });
 
-  // Achievements Kyri has awarded over the last three months.
+  // Achievements the coach has awarded over the last three months.
   const achievementTypes = defaultAchievementTypes();
   const fighterOnly = new Set(["Won a fight", "Finished fight camp", "Made weight"]);
   const achievements = [];
@@ -225,7 +225,7 @@ function seed() {
   }
 
   return {
-    academy: { name: "KYRI Training", owner: "Kyriakos Nicolaou", currency: "EUR", locations: ["Main Gym"], email: "kyri@trainwithkyri.com", instagram: "trainwithkyri", graceDay: 7,
+    academy: { name: "TrainHub", owner: "Kyriakos Nicolaou", currency: "EUR", locations: ["Main Gym"], email: "kyri@trainwithkyri.com", instagram: "trainwithkyri", graceDay: 7,
       ranking: defaultRanking(), achievementTypes },
     achievements, prizes: {}, winners: {},
     staff, plans, classes, students, attendance, bookings, invoices, expenses, leads, automations, events, messages: [],
@@ -235,10 +235,10 @@ function seed() {
 }
 
 // --- monthly ranking ------------------------------------------------------------
-// Every month athletes collect points; #1 wins Kyri's prize. Points per 1-on-1 PT session,
+// Every month athletes collect points; #1 wins the coach's prize. Points per 1-on-1 PT session,
 // per group session, per friend who signs up, plus whatever each achievement is worth.
 function defaultRanking() {
-  return { pt: 15, group: 3, referral: 50, prize: "Free 1-on-1 PT session + KYRI t-shirt" };
+  return { pt: 15, group: 3, referral: 50, prize: "Free 1-on-1 PT session + gym t-shirt" };
 }
 function defaultAchievementTypes() {
   return [
@@ -325,6 +325,9 @@ function migrate(s) {
   s.groups ||= defaultGroups();
   s.academy.graceDay ||= 7;
   s.academy.ranking = { ...defaultRanking(), ...(s.academy.ranking || {}) };
+  // Demo data saved before the generic rebrand.
+  if (s.academy.name === "KYRI Training") s.academy.name = "TrainHub";
+  s.academy.ranking.prize = s.academy.ranking.prize.replace("KYRI t-shirt", "gym t-shirt");
   s.academy.achievementTypes ||= defaultAchievementTypes();
   s.achievements ||= [];
   s.prizes ||= {};
@@ -359,6 +362,8 @@ window.addEventListener("storage", (e) => {
 
 // --- derived helpers ----------------------------------------------------------
 export const byId = (list, id) => state[list].find((x) => x.id === id);
+/** The coach's first name (from Settings → Business profile), used in athlete-facing copy. */
+export const coachFirst = () => (state.academy.owner || "your coach").split(" ")[0];
 export const fullName = (s) => (s ? `${s.first} ${s.last}` : "—");
 export const money = (n) => new Intl.NumberFormat("en-IE", { style: "currency", currency: state.academy.currency || "EUR", maximumFractionDigits: n % 1 ? 2 : 0 }).format(n || 0);
 export const isFighter = (s) => /fighter/.test(s.level || "");

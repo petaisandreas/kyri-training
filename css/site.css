@@ -16,7 +16,7 @@ body.site { overflow-x: hidden; }
 .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
 .hero-mark { display: flex; flex-direction: column; align-items: center; gap: 22px; color: var(--ink); }
 .hero-mark .logo-mark { width: min(340px, 70vw); aspect-ratio: 1; }
-.hero-mark .word { font: 400 clamp(28px, 4vw, 46px)/1 var(--display); letter-spacing: .6em; margin-right: -.6em; }
+.hero-mark .word { font: 400 clamp(26px, 3.6vw, 42px)/1 var(--display); letter-spacing: .3em; margin-right: -.3em; text-transform: uppercase; }
 
 .marquee { border-block: 1px solid var(--line); overflow: hidden; padding: 18px 0; background: #000; }
 .marquee div { display: flex; gap: 48px; width: max-content; animation: slide 30s linear infinite; }

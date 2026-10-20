@@ -1,8 +1,8 @@
 {
   "id": "./app.html",
-  "name": "KYRI Coach",
-  "short_name": "KYRI Coach",
-  "description": "Kyri's coach dashboard: athletes, bookings and billing.",
+  "name": "TrainHub Coach",
+  "short_name": "TH Coach",
+  "description": "Coach dashboard: athletes, bookings, ranking and billing.",
   "start_url": "./app.html",
   "scope": "./app.html",
   "display": "standalone",

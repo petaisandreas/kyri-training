@@ -1,8 +1,8 @@
 {
   "id": "./member.html",
-  "name": "KYRI — Athlete",
-  "short_name": "KYRI",
-  "description": "Book your sessions with Kyri.",
+  "name": "TrainHub",
+  "short_name": "TrainHub",
+  "description": "Book your training sessions.",
   "start_url": "./member.html",
   "scope": "./member.html",
   "display": "standalone",

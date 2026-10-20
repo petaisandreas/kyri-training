@@ -1,4 +1,4 @@
-// Minimal zero-dependency static file server for KYRI Training.
+// Minimal zero-dependency static file server for TrainHub.
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
@@ -31,4 +31,4 @@ createServer(async (req, res) => {
   } catch {
     res.writeHead(404, { "Content-Type": "text/plain" }).end("Not found");
   }
-}).listen(port, () => console.log(`KYRI Training running at http://localhost:${port}`));
+}).listen(port, () => console.log(`TrainHub running at http://localhost:${port}`));

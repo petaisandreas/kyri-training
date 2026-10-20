@@ -1,6 +1,6 @@
-# KYRI Training
+# TrainHub
 
-Booking and athlete management for **KYRI**: personal training with Kyriakos Nicolaou ([@trainwithkyri](https://www.instagram.com/trainwithkyri/)). Strength, conditioning and cardio for fighters of any martial art, and for non-fighters who just want to get fit.
+Booking and athlete management for a personal trainer. The demo is set up for Kyriakos Nicolaou ([@trainwithkyri](https://www.instagram.com/trainwithkyri/)). Strength, conditioning and cardio for fighters of any martial art, and for non-fighters who just want to get fit.
 Has a public site, a coach web app and a phone-first athlete app. No dependencies: vanilla JS modules and a tiny Node static server.
 
 ```bash
@@ -19,7 +19,7 @@ Dashboard · **Athletes** (photo, client type and goal; for fighters, the martia
 Billing (plans, packs, invoices, expenses) · Leads & follow-ups · Reports · Settings.
 
 ## Monthly ranking
-Every month athletes collect points, and the #1 athlete wins Kyri's prize. That gives people a reason to train more, hit goals and bring friends, so the roster grows by itself.
+Every month athletes collect points, and the #1 athlete wins the coach's prize. That gives people a reason to train more, hit goals and bring friends, so the roster grows by itself.
 - **1-on-1 PT session:** +15 · **group session:** +3 · **friend who signs up:** +50 · **achievements:** their own points (personal record +20, won a fight +50, hit weight target +30…)
 - Kyri awards achievements from an athlete's profile or the ranking page, edits the points, prize and achievement list in **Settings**, and marks the prize as given once a month ends.
 - Each athlete has a personal **invite link** in the app (Ranking tab). Friends who sign up through it are tagged as their referral in Leads; when Kyri converts the lead, the athlete gets the points.
@@ -50,6 +50,7 @@ You can reset it from **Settings → Reset demo data**. Demo profile photos are 
 - `js/ui.js`: escaping, modal and form helpers, charts, discipline chips
 - `js/app.js`: coach shell and hash router; `js/views/*.js` has one file per module
 - `js/member.js`: athlete app
+- Brand: generic **TrainHub** name with a dumbbell mark (`assets/logo.svg`). The coach's name, business name and Instagram come from **Settings → Business profile**
 - `css/tokens.css` (black & white theme, dark default with a light alternate), `css/app.css`, `css/member.css`, `css/site.css`
 
 ## Before going live

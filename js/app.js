@@ -42,7 +42,7 @@ function render() {
   main.innerHTML = view.render(current.params);
   view.mount?.(main, current.params);
   main.scrollTop = scroll;
-  document.title = `${view.title} · KYRI Coach`;
+  document.title = `${view.title} · TrainHub Coach`;
   renderNav();
 }
 
