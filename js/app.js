@@ -1,5 +1,5 @@
 // App shell: sidebar navigation + hash router. Each view exports { title, render(params), mount?(el, params) }.
-import { db, subscribe } from "./store.js";
+import { db, subscribe, client, KEYS } from "./store.js";
 import { esc, $ } from "./ui.js";
 import dashboard from "./views/dashboard.js";
 import students from "./views/students.js";
@@ -34,6 +34,8 @@ function renderNav() {
       ${items.map(([id, label, icon]) => `<a href="#/${id}" class="nav-link ${current.name === id ? "active" : ""}"><span class="nav-ico">${icon}</span>${label}</a>`).join("")}
     </div>`).join("");
   $("#academy-name").textContent = db().academy.name;
+  const initials = String(db().academy.owner || "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("") || client.coach.initials;
+  $("#me-avatar").textContent = initials;
 }
 
 function render() {
@@ -42,7 +44,7 @@ function render() {
   main.innerHTML = view.render(current.params);
   view.mount?.(main, current.params);
   main.scrollTop = scroll;
-  document.title = `${view.title} · KYRI Coach`;
+  document.title = `${view.title} · ${client.coachAppName}`;
   renderNav();
 }
 
@@ -71,7 +73,7 @@ search.addEventListener("input", () => {
     ...d.students.filter((s) => `${s.first} ${s.last} ${s.email}`.toLowerCase().includes(q)).slice(0, 6).map((s) => [`#/students/${s.id}`, `${s.first} ${s.last}`, s.disciplines.join(" · ") || "Athlete"]),
     ...d.leads.filter((l) => l.name.toLowerCase().includes(q)).slice(0, 4).map((l) => [`#/leads`, l.name, "Lead"]),
   ];
-  results.innerHTML = hits.length ? hits.map(([h, t, k]) => `<a href="${h}"><span>${esc(t)}</span><small>${k}</small></a>`).join("") : `<div class="muted pad">No matches</div>`;
+  results.innerHTML = hits.length ? hits.map(([h, t, k]) => `<a href="${esc(h)}"><span>${esc(t)}</span><small>${esc(k)}</small></a>`).join("") : `<div class="muted pad">No matches</div>`;
   results.hidden = false;
 });
 results.addEventListener("click", () => { results.hidden = true; search.value = ""; });
@@ -86,7 +88,7 @@ themeBtn.addEventListener("click", () => {
   const cur = document.documentElement.dataset.theme || "dark";
   const next = cur === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
-  try { localStorage.setItem("kyri:theme", next); } catch {}
+  try { localStorage.setItem(KEYS.theme, next); } catch {}
 });
 
 route();

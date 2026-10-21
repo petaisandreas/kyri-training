@@ -1,0 +1,33 @@
+{
+  "id": "kyri",
+  "isDefault": true,
+  "appName": "KYRI",
+  "coachAppName": "KYRI Coach",
+  "businessName": "KYRI Training",
+  "coach": { "name": "Kyriakos Nicolaou", "short": "Kyri", "initials": "KN" },
+  "contact": { "email": "kyri@trainwithkyri.com", "instagram": "trainwithkyri" },
+  "locale": { "currency": "EUR", "numberLocale": "en-IE" },
+  "storagePrefix": "kyri",
+  "paymentRefPrefix": "KYRI",
+  "ranking": { "prize": "Free 1-on-1 PT session + KYRI t-shirt" },
+  "seed": { "location": "Main Gym" },
+  "site": {
+    "title": "KYRI Training — Personal training & conditioning",
+    "description": "Personal training with Kyriakos Nicolaou: strength, conditioning and cardio for fighters and for everyone who wants to get fit. Book your sessions online.",
+    "athleteManifestDescription": "Book your sessions with Kyri.",
+    "coachManifestDescription": "Kyri's coach dashboard: athletes, bookings and billing.",
+    "heroLead": "1-on-1 personal training and small-group sessions with Kyriakos Nicolaou. Fighters from every martial art come to him for their conditioning. Everyone else comes for the cardio, strength and fat loss. Same coach, same standard, a plan built around your goal.",
+    "coachBio": "Personal trainer specialising in strength and conditioning. Kyri builds the engine: fighters from Muay Thai, boxing, MMA and more train with him to get through every round, and non-fighters train with him to get fitter, stronger and leaner. Every session is planned around your goal."
+  },
+  "theme": {
+    "themeColor": "#000000",
+    "background": "#0b0b0c",
+    "heroBg": "#000000",
+    "heroInk": "#f4f4f2",
+    "dark": { "accent": "#f4f4f2", "accentInk": "#0b0b0c", "accent2": "#9db4ff" },
+    "light": { "accent": "#0b0b0c", "accentInk": "#ffffff", "accent2": "#2457c5" },
+    "icons": { "athlete": { "bg": "#000000", "fg": "#f4f4f2" }, "coach": { "bg": "#ffffff", "fg": "#0b0b0c" } }
+  },
+  "legacy": { "renameFrom": "TrainHub", "renameTo": "KYRI Training", "prizeFrom": "gym t-shirt", "prizeTo": "KYRI t-shirt" },
+  "deploy": { "customDomain": "" }
+}

@@ -82,28 +82,28 @@ function render() {
   const d = db();
   const won = d.leads.filter((l) => l.stage === "Won").length;
   const closed = d.leads.filter((l) => ["Won", "Lost"].includes(l.stage)).length;
-  const origin = location.origin;
+  const embedUrl = new URL("index.html#trial", location.href).href;
 
   const body = {
     pipeline: `<div class="kanban">${LEAD_STAGES.map((st) => {
       const ls = d.leads.filter((l) => l.stage === st).sort((a, b) => b.created.localeCompare(a.created));
-      return `<div class="lane" data-lane="${st}"><div class="lane-head"><b>${st}</b><span>${ls.length}</span></div>
-        ${ls.map((l) => `<div class="lead-card" draggable="true" data-lead="${l.id}">
+      return `<div class="lane" data-lane="${esc(st)}"><div class="lane-head"><b>${st}</b><span>${ls.length}</span></div>
+        ${ls.map((l) => `<div class="lead-card" draggable="true" data-lead="${esc(l.id)}">
           <b>${esc(l.name)}</b><small>${esc(l.interest)} · ${esc(l.source)}</small>${l.referredBy && byId("students", l.referredBy) ? `<small class="ref-tag">👥 Friend of ${esc(fullName(byId("students", l.referredBy)))}</small>` : ""}
           <small class="muted">${l.trialDate ? "Trial " + fmtDate(l.trialDate, { month: "short", day: "numeric" }) : "Added " + fmtDate(l.created, { month: "short", day: "numeric" })}</small>
-          ${!["Won", "Lost"].includes(st) ? `<div class="lead-actions"><button class="btn btn-sm" data-convert="${l.id}">Convert</button><button class="btn btn-sm btn-ghost" data-next="${l.id}">Advance →</button></div>` : ""}
+          ${!["Won", "Lost"].includes(st) ? `<div class="lead-actions"><button class="btn btn-sm" data-convert="${esc(l.id)}">Convert</button><button class="btn btn-sm btn-ghost" data-next="${esc(l.id)}">Advance →</button></div>` : ""}
         </div>`).join("")}</div>`;
     }).join("")}</div>`,
     automations: `<div class="toolbar"><p class="muted grow">Sequences run automatically when their trigger fires. Toggle them on or off any time.</p><button class="btn btn-primary" data-new-auto>+ New automation</button></div>
       <div class="grid grid-2">${d.automations.map((a) => `<section class="card">
         <header class="card-head"><div><h2>${esc(a.name)}</h2><small class="muted">When: ${esc(a.trigger)}</small></div>
-          <label class="switch"><input type="checkbox" data-toggle="${a.id}" ${a.enabled ? "checked" : ""}/><span></span></label></header>
+          <label class="switch"><input type="checkbox" data-toggle="${esc(a.id)}" ${a.enabled ? "checked" : ""}/><span></span></label></header>
         <ol class="timeline">${a.steps.map((s) => `<li><span class="tl-day">Day ${s.delay}</span>${badge(s.channel, s.channel === "SMS" ? "info" : "neutral")} ${esc(s.text)}</li>`).join("")}</ol>
-        <button class="btn btn-ghost btn-sm" data-edit-auto="${a.id}">Edit sequence</button></section>`).join("")}</div>`,
+        <button class="btn btn-ghost btn-sm" data-edit-auto="${esc(a.id)}">Edit sequence</button></section>`).join("")}</div>`,
     capture: `<div class="grid grid-2">
       <section class="card"><header class="card-head"><h2>Website lead form</h2></header>
         <p class="muted">Paste this snippet into your website or Instagram bio link. Submissions land in the <b>New</b> column of your pipeline.</p>
-        <pre class="code">&lt;iframe src="${esc(origin)}/index.html#trial" width="100%" height="560" style="border:0"&gt;&lt;/iframe&gt;</pre>
+        <pre class="code">&lt;iframe src="${esc(embedUrl)}" width="100%" height="560" style="border:0"&gt;&lt;/iframe&gt;</pre>
         <button class="btn btn-ghost btn-sm" data-copy>Copy snippet</button></section>
       <section class="card"><header class="card-head"><h2>Referral program</h2></header>
         <p class="muted">Every athlete has a personal invite link in their app (Ranking tab). Friends who sign up through it are tagged here, and when you convert them the athlete gets <b>+${d.academy.ranking.referral} ranking points</b>.</p>

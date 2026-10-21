@@ -1,0 +1,16 @@
+/* GENERATED from clients/kyri/client.json by scripts/sync-default.mjs / scripts/build.mjs. Do not edit by hand. */
+:root {
+  --accent: #f4f4f2;
+  --accent-ink: #0b0b0c;
+  --accent-soft: rgba(244, 244, 242, 0.1);
+  --accent-2: #9db4ff;
+  --brand-hero: #000000;
+  --brand-hero-ink: #f4f4f2;
+}
+
+:root[data-theme="light"] {
+  --accent: #0b0b0c;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(11, 11, 12, 0.07);
+  --accent-2: #2457c5;
+}

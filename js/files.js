@@ -1,8 +1,9 @@
 // Uploaded document files live in IndexedDB (localStorage is too small for PDFs and photos).
 // Metadata stays in the main store under `documents`.
 import { esc } from "./ui.js";
+import client from "./client.js";
 
-const DB = "kyri-files", STORE = "files";
+const DB = `${client.storagePrefix}-files`, STORE = "files";
 export const MAX_BYTES = 10 * 1024 * 1024;
 export const ACCEPT = "application/pdf,image/png,image/jpeg,image/webp,image/heic";
 

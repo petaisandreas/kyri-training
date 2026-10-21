@@ -1,7 +1,12 @@
 // Data layer: a single JSON document in localStorage, seeded with a demo roster of fighters and fitness clients.
-const KEY = "kyri:v3";
+import client from "./client.js";
 
-/** Martial arts a fighter competes in (trained elsewhere — Kyri does their conditioning). Colors are used for chips. */
+// Storage keys come from the client config: "<storagePrefix>:v3", ":member", ":theme".
+export { client };
+export const KEYS = Object.freeze({ data: `${client.storagePrefix}:v3`, member: `${client.storagePrefix}:member`, theme: `${client.storagePrefix}:theme` });
+const KEY = KEYS.data;
+
+/** Martial arts a fighter competes in (trained elsewhere — the coach does their conditioning). Colors are used for chips. */
 export const DISCIPLINES = {
   "Muay Thai": "#d64545", Boxing: "#c9a227", Kickboxing: "#e07b2e", MMA: "#8a8f98",
   BJJ: "#3d6fd6", Wrestling: "#3c9a6b", Judo: "#6b4fc4", Karate: "#b8b8b8", Taekwondo: "#2aa5b8",
@@ -14,7 +19,7 @@ export const SESSION_TYPES = ["1-on-1 PT", "Fighter conditioning", "Cardio / HII
 export const FIGHTER_GOALS = ["Fight conditioning", "Making weight", "Fight camp", "Explosive power"];
 export const FITNESS_GOALS = ["Weight loss", "Cardio & endurance", "Strength", "General fitness", "Mobility"];
 export const LEAD_STAGES = ["New", "Contacted", "Trial booked", "Trial done", "Won", "Lost"];
-/** due -> pending (athlete says paid) -> paid (Kyri confirms). */
+/** due -> pending (athlete says paid) -> paid (coach confirms). */
 export const INVOICE_STATUSES = ["due", "pending", "paid"];
 export const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -40,7 +45,7 @@ function seed() {
   const now = new Date();
 
   const staff = [
-    { id: "st_1", name: "Kyriakos Nicolaou", role: "Head Coach", email: "kyri@trainwithkyri.com", rate: 0, color: "#f5f5f5" },
+    { id: "st_1", name: client.coach.name, role: "Head Coach", email: client.contact.email, rate: 0, color: "#f5f5f5" },
   ];
 
   const plans = [
@@ -53,7 +58,7 @@ function seed() {
 
   const classes = [];
   const addClass = (name, days, start, dur, type, capacity) =>
-    days.forEach((day) => classes.push({ id: uid("cl"), name, day, start, duration: dur, instructorId: "st_1", level: type, capacity, location: "Main Gym" }));
+    days.forEach((day) => classes.push({ id: uid("cl"), name, day, start, duration: dur, instructorId: "st_1", level: type, capacity, location: client.seed.location }));
   addClass("Morning HIIT", [1, 3, 5], "06:30", 45, "Cardio / HIIT", 12);
   addClass("1-on-1 PT", [1, 2, 3, 4, 5], "07:30", 60, "1-on-1 PT", 1);
   addClass("1-on-1 PT", [1, 2, 3, 4, 5], "08:30", 60, "1-on-1 PT", 1);
@@ -68,7 +73,7 @@ function seed() {
   addClass("Saturday Bootcamp", [6], "11:15", 60, "Cardio / HIIT", 16);
 
   const first = ["Andreas", "Maria", "Nikos", "Elena", "Christos", "Sofia", "Giorgos", "Katerina", "Marios", "Eleni", "Panayiotis", "Despina", "Stelios", "Anna", "Michalis", "Christina", "Loizos", "Ioanna", "Savvas", "Georgia", "Antonis", "Rafaela", "Kostas", "Natalia", "Pavlos", "Myria", "Demetris", "Chloe", "Alex", "Lena", "Omar", "Ivan"];
-  const last = ["Georgiou", "Christodoulou", "Ioannou", "Constantinou", "Charalambous", "Michael", "Nicolaou", "Panayiotou", "Demetriou", "Kyriacou", "Savva", "Antoniou", "Hadjigeorgiou", "Petrou", "Stylianou", "Andreou"];
+  const last = ["Georgiou", "Christodoulou", "Ioannou", "Constantinou", "Charalambous", "Michael", "Nicolaou", "Panayiotou", "Demetriou", "Kyprianou", "Savva", "Antoniou", "Hadjigeorgiou", "Petrou", "Stylianou", "Andreou"];
   const combos = [["Muay Thai"], ["Boxing"], ["MMA", "BJJ", "Wrestling"], ["Muay Thai", "Boxing"], ["Kickboxing"], ["MMA", "Muay Thai"], ["BJJ"], ["Boxing"], ["Judo", "MMA"], ["Muay Thai"], ["Kickboxing", "Boxing"], ["Wrestling"], ["Karate"], ["Taekwondo", "Kickboxing"]];
   // Demo portraits (randomuser.me placeholders) for most athletes; the rest show initials until a photo is uploaded.
   const female = new Set(["Maria", "Elena", "Sofia", "Katerina", "Eleni", "Despina", "Anna", "Christina", "Ioanna", "Georgia", "Rafaela", "Natalia", "Myria", "Chloe", "Lena"]);
@@ -99,7 +104,7 @@ function seed() {
       password: DEMO_PASSWORD,
       photo: portrait(fn, i),
       notes: "",
-      location: "Main Gym",
+      location: client.seed.location,
     });
   }
 
@@ -188,7 +193,7 @@ function seed() {
 
   const automations = [
     { id: uid("au"), name: "New enquiry welcome", trigger: "Lead created", enabled: true, steps: [
-      { delay: 0, channel: "Email", text: "Thanks for reaching out! Here's how to book your free trial PT session with Kyri." },
+      { delay: 0, channel: "Email", text: `Thanks for reaching out! Here's how to book your free trial PT session with ${client.coach.short}.` },
       { delay: 2, channel: "SMS", text: "Ready to train? Reply with a day that works and I'll hold a spot for you." },
       { delay: 7, channel: "Email", text: "What to bring to your first session: trainers, a towel and plenty of water." } ] },
     { id: uid("au"), name: "Trial follow-up", trigger: "Trial class attended", enabled: true, steps: [
@@ -197,7 +202,7 @@ function seed() {
     { id: uid("au"), name: "Fight week check-in", trigger: "7 days before a fight", enabled: true, steps: [
       { delay: 0, channel: "SMS", text: "Fight week. We taper the conditioning now: stick to the weight plan, sleep, and stay sharp." } ] },
     { id: uid("au"), name: "Monthly winner", trigger: "Monthly ranking winner", enabled: true, steps: [
-      { delay: 0, channel: "SMS", text: "You finished #1 in this month's KYRI ranking! Your prize is waiting at the gym." } ] },
+      { delay: 0, channel: "SMS", text: `You finished #1 in this month's ${client.appName} ranking! Your prize is waiting at the gym.` } ] },
     { id: uid("au"), name: "We miss you", trigger: "No session for 14 days", enabled: true, steps: [
       { delay: 0, channel: "Email", text: "Haven't seen you in a while. Here's this week's timetable, so book a session." } ] },
   ];
@@ -212,7 +217,7 @@ function seed() {
   Object.assign(leads[0], { source: "Referral", referredBy: students[1].id, stage: "Trial booked", trialDate: iso(addDays(now, 2)) });
   Object.assign(leads[1], { source: "Referral", referredBy: students[4].id, stage: "New" });
 
-  // Achievements Kyri has awarded over the last three months.
+  // Achievements the coach has awarded over the last three months.
   const achievementTypes = defaultAchievementTypes();
   const fighterOnly = new Set(["Won a fight", "Finished fight camp", "Made weight"]);
   const achievements = [];
@@ -227,7 +232,7 @@ function seed() {
   }
 
   return {
-    academy: { name: "KYRI Training", owner: "Kyriakos Nicolaou", currency: "EUR", locations: ["Main Gym"], email: "kyri@trainwithkyri.com", instagram: "trainwithkyri", graceDay: 7,
+    academy: { name: client.businessName, owner: client.coach.name, ownerShort: client.coach.short, currency: client.locale.currency, locations: [client.seed.location], email: client.contact.email, instagram: client.contact.instagram, graceDay: 7,
       revolut: { username: "" }, ranking: defaultRanking(), achievementTypes },
     achievements, prizes: {}, winners: {},
     staff, plans, classes, students, attendance, bookings, invoices, expenses, leads, automations, events, messages: [],
@@ -237,10 +242,10 @@ function seed() {
 }
 
 // --- monthly ranking ------------------------------------------------------------
-// Every month athletes collect points; #1 wins Kyri's prize. Points per 1-on-1 PT session,
+// Every month athletes collect points; #1 wins the coach's prize. Points per 1-on-1 PT session,
 // per group session, per friend who signs up, plus whatever each achievement is worth.
 function defaultRanking() {
-  return { pt: 15, group: 3, referral: 50, prize: "Free 1-on-1 PT session + KYRI t-shirt" };
+  return { pt: 15, group: 3, referral: 50, prize: client.ranking.prize };
 }
 function defaultAchievementTypes() {
   return [
@@ -327,9 +332,17 @@ function load() {
   return migrate(seed());
 }
 // Bring data saved by older versions up to the current shape.
-/** Validates and upgrades an imported/saved object; throws if it is not KYRI data. */
+/** Validates and upgrades an imported/saved object; throws if it is not this app's data. */
 export function migrateData(obj) {
-  if (!obj || typeof obj !== "object" || !obj.academy || typeof obj.academy !== "object" || !Array.isArray(obj.students)) throw new Error("Not KYRI data");
+  if (!obj || typeof obj !== "object" || !obj.academy || typeof obj.academy !== "object" || !Array.isArray(obj.students)) throw new Error("Not a " + client.appName + " backup");
+  // Backups are untrusted input: ids end up in HTML attributes and URLs, so only accept our own id format.
+  const ID_RE = /^[a-z]+_[a-z0-9]+$/;
+  for (const list of ["students", "leads", "invoices"]) {
+    if (Array.isArray(obj[list]) && obj[list].some((r) => !r || typeof r.id !== "string" || !ID_RE.test(r.id))) throw new Error("Not a " + client.appName + " backup (bad " + list + " id)");
+  }
+  for (const st of obj.students) {
+    if (st.disciplines !== undefined && (!Array.isArray(st.disciplines) || st.disciplines.some((d) => !DISCIPLINE_NAMES.includes(d)))) throw new Error("Not a " + client.appName + " backup (unknown discipline)");
+  }
   return migrate(obj);
 }
 function migrate(s) {
@@ -340,9 +353,15 @@ function migrate(s) {
   s.academy.graceDay ||= 7;
   s.academy.revolut = { username: "", ...(s.academy.revolut || {}) };
   s.academy.ranking = { ...defaultRanking(), ...(s.academy.ranking || {}) };
-  // Undo the short-lived generic "TrainHub" rebrand in saved demo data.
-  if (s.academy.name === "TrainHub") s.academy.name = "KYRI Training";
-  s.academy.ranking.prize = String(s.academy.ranking.prize ?? defaultRanking().prize).replace("gym t-shirt", "KYRI t-shirt");
+  s.academy.ranking.prize = String(s.academy.ranking.prize ?? defaultRanking().prize);
+  s.academy.currency ||= client.locale.currency;
+  s.academy.ownerShort ||= client.coach.short;
+  // Only the original client has legacy saved data: undo the short-lived generic "TrainHub" rebrand (config: client.legacy).
+  const L = client.legacy;
+  if (L) {
+    if (s.academy.name === L.renameFrom) s.academy.name = L.renameTo;
+    s.academy.ranking.prize = s.academy.ranking.prize.replace(L.prizeFrom, L.prizeTo);
+  }
   s.academy.achievementTypes ||= defaultAchievementTypes();
   s.achievements ||= [];
   s.prizes ||= {};
@@ -363,6 +382,10 @@ function persist() {
 }
 
 export const db = () => state;
+/** Coach full name: the Settings value wins over the client config. */
+export const coachName = () => state.academy.owner || client.coach.name;
+/** What athletes call the coach: Settings value, then client config, then the first word of the full name. */
+export const coachShort = () => state.academy.ownerShort || client.coach.short || String(coachName()).split(/\s+/)[0];
 export function update(fn) {
   fn(state);
   persist();
@@ -380,7 +403,7 @@ window.addEventListener("storage", (e) => {
 // --- derived helpers ----------------------------------------------------------
 export const byId = (list, id) => state[list].find((x) => x.id === id);
 export const fullName = (s) => (s ? `${s.first} ${s.last}` : "—");
-export const money = (n) => new Intl.NumberFormat("en-IE", { style: "currency", currency: state.academy.currency || "EUR", maximumFractionDigits: n % 1 ? 2 : 0 }).format(n || 0);
+export const money = (n) => new Intl.NumberFormat(client.locale.numberLocale, { style: "currency", currency: state.academy.currency || client.locale.currency, maximumFractionDigits: n % 1 ? 2 : 0 }).format(n || 0);
 export const isFighter = (s) => /fighter/.test(s.level || "");
 export const recordText = (s) => `${s.record?.w || 0}-${s.record?.l || 0}${s.record?.d ? "-" + s.record.d : ""}`;
 
@@ -425,7 +448,7 @@ export function markPaid(studentId, groupIds, { via = "cash" } = {}) {
 }
 
 // --- invoices & Revolut payments ---------------------------------------------------
-// Flow: invoice "due" -> athlete taps "I have paid" -> "pending" -> Kyri confirms -> "paid" (or rejects -> "due" + note).
+// Flow: invoice "due" -> athlete taps "I have paid" -> "pending" -> coach confirms -> "paid" (or rejects -> "due" + note).
 const PAID_VIA = ["revolut", "cash", "bank", "other"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -457,23 +480,23 @@ export const openInvoices = (studentId) =>
 export const amountOwed = (studentId) =>
   state.invoices.filter((i) => i.studentId === studentId && i.status === "due").reduce((a, i) => a + (Number(i.amount) || 0), 0);
 
-/** "KYRI Andreas G Oct": plain ASCII, <= 30 chars, months taken from the invoices being paid. */
+/** "<PREFIX> Andreas G Oct": plain ASCII, <= 30 chars, months taken from the invoices being paid. */
 export function paymentReference(studentId, invoices = []) {
   const s = state.students.find((x) => x.id === studentId);
   const ascii = (t) => String(t || "").normalize("NFD").replace(/[^A-Za-z0-9 ]/g, "").trim();
   const months = [...new Set(invoices.map((i) => MONTHS[Number(i.date.slice(5, 7)) - 1]).filter(Boolean))];
   if (!months.length) months.push(MONTHS[new Date().getMonth()]);
   const tail = ` ${ascii(s?.last)[0] || ""} ${months.join(" ")}`.replace(/ +/g, " ");
-  return `KYRI ${ascii(s?.first) || "Athlete"}`.slice(0, 30 - tail.length).trimEnd() + tail;
+  return `${client.paymentRefPrefix} ${ascii(s?.first) || "Athlete"}`.slice(0, 30 - tail.length).trimEnd() + tail;
 }
 
 const USERNAME_RE = /^[a-z0-9._-]{3,32}$/i;
 /** Stored username, re-validated; "" if missing or invalid (e.g. tampered localStorage). */
 export const revolutUsername = () => { const u = state.academy.revolut?.username; return typeof u === "string" && USERNAME_RE.test(u) ? u : ""; };
-/** Accepts "kyri", "@kyri", "https://revolut.me/kyri/"; "" clears it. Returns { ok, username, error }. */
+/** Accepts "name", "@name", "https://revolut.me/name/"; "" clears it. Returns { ok, username, error }. */
 export function setRevolutUsername(input) {
   const name = String(input ?? "").trim().replace(/^https?:\/\/(www\.)?revolut\.me\//i, "").replace(/^@/, "").split(/[/?#]/)[0];
-  if (name && !USERNAME_RE.test(name)) return { ok: false, username: revolutUsername(), error: "Use 3-32 letters, numbers, dots, dashes or underscores (e.g. @kyri or https://revolut.me/kyri)." };
+  if (name && !USERNAME_RE.test(name)) return { ok: false, username: revolutUsername(), error: "Use 3-32 letters, numbers, dots, dashes or underscores (e.g. @username or https://revolut.me/username)." };
   update((d) => { d.academy.revolut = { ...(d.academy.revolut || {}), username: name }; });
   return { ok: true, username: name, error: "" };
 }
@@ -485,7 +508,7 @@ const revolutAmount = (amount) => Math.round(Number(amount) * 100);
 export function revolutLink(amount, note = "") {
   const u = revolutUsername();
   if (!u) return null;
-  return `https://revolut.me/${encodeURIComponent(u)}?amount=${revolutAmount(amount)}&currency=EUR&note=${encodeURIComponent(note)}`;
+  return `https://revolut.me/${encodeURIComponent(u)}?amount=${revolutAmount(amount)}&currency=${encodeURIComponent(state.academy.currency || client.locale.currency)}&note=${encodeURIComponent(note)}`;
 }
 
 /** Athlete says they paid: all due invoices become pending. Returns the claimed invoices. */
@@ -504,7 +527,7 @@ export function claimPaid(studentId, via = "revolut") {
   return claimed;
 }
 
-/** Kyri confirms the money arrived. */
+/** Coach confirms the money arrived. */
 export function confirmPayment(invoiceId, via) {
   let ok = false;
   update((d) => {
@@ -516,7 +539,7 @@ export function confirmPayment(invoiceId, via) {
   return ok;
 }
 
-/** Kyri could not find the payment: back to due, with a note the athlete sees. */
+/** Coach could not find the payment: back to due, with a note the athlete sees. */
 export function rejectPayment(invoiceId, note = "") {
   let ok = false;
   update((d) => {

@@ -97,7 +97,7 @@ function roster(classId, date) {
   <div class="roster">
     ${pool.map((s) => {
       const on = future ? booked.has(s.id) : present.has(s.id);
-      return `<button class="roster-item ${on ? "on" : ""}" data-sid="${s.id}" data-name="${esc(fullName(s).toLowerCase())}">
+      return `<button class="roster-item ${on ? "on" : ""}" data-sid="${esc(s.id)}" data-name="${esc(fullName(s).toLowerCase())}">
         ${athleteAvatar(s)}<span class="grow"><b>${esc(fullName(s))}</b>${s.disciplines.length ? discChips(s.disciplines, { max: 2 }) : `<small class="muted">${esc(s.goal || s.level)}</small>`}</span>
         ${!future && booked.has(s.id) ? badge("booked", "info") : ""}<span class="tick">${on ? "✓" : ""}</span></button>`;
     }).join("")}

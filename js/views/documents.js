@@ -35,7 +35,7 @@ function render() {
         <td><a class="who" href="#/students/${s.id}">${athleteAvatar(s)}<span><b>${esc(fullName(s))}</b><small>${esc(s.phone)}</small></span></a></td>
         <td>${badge(DOC_LABEL[status], DOC_TONE[status])}</td>
         <td class="hide-sm">${doc?.expires ? fmtDate(doc.expires) : "—"}</td>
-        <td class="right">${doc ? `<button class="btn btn-sm btn-ghost" data-view="${doc.id}">View</button> ` : ""}<button class="btn btn-sm ${status === "valid" ? "btn-ghost" : "btn-primary"}" data-upload="${s.id}">${status === "none" ? "Upload" : "Renew"}</button></td></tr>`).join("")}
+        <td class="right">${doc ? `<button class="btn btn-sm btn-ghost" data-view="${esc(doc.id)}">View</button> ` : ""}<button class="btn btn-sm ${status === "valid" ? "btn-ghost" : "btn-primary"}" data-upload="${esc(s.id)}">${status === "none" ? "Upload" : "Renew"}</button></td></tr>`).join("")}
       </tbody></table>` : empty("Everyone's paperwork is in order. 🎉")}</div>`
   : `
     <div class="toolbar">
@@ -43,7 +43,7 @@ function render() {
       <input class="input" type="search" placeholder="Search name or file…" value="${esc(q)}" data-q />
     </div>
     <div class="card flush">${docs.length ? `<table class="table"><thead><tr><th>Document</th><th>Athlete</th><th class="hide-sm">Uploaded</th><th class="hide-sm">Expires</th><th class="hide-sm">Size</th></tr></thead><tbody>
-      ${docs.map((x) => `<tr data-view="${x.id}" class="clickable"><td><b>${esc(x.type)}</b><small>${esc(x.name)}${x.by === "athlete" ? " · uploaded by athlete" : ""}</small></td>
+      ${docs.map((x) => `<tr data-view="${esc(x.id)}" class="clickable"><td><b>${esc(x.type)}</b><small>${esc(x.name)}${x.by === "athlete" ? " · uploaded by athlete" : ""}</small></td>
         <td>${esc(fullName(byId("students", x.studentId)))}</td><td class="hide-sm">${fmtDate(x.uploaded)}</td>
         <td class="hide-sm">${x.expires ? fmtDate(x.expires) : "—"}</td><td class="hide-sm">${fmtSize(x.size)}</td></tr>`).join("")}
       </tbody></table>` : empty("No documents match.")}</div>`;

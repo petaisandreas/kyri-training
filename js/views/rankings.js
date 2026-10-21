@@ -3,7 +3,7 @@ import { esc, $, $$, athleteAvatar, badge, fmtDate, modal, field, toast, empty }
 
 let month = thisMonth();
 
-/** Kyri awards an achievement (from the catalog in Settings, or a custom one) to an athlete. */
+/** The coach awards an achievement (from the catalog in Settings, or a custom one) to an athlete. */
 export function awardAchievement(s) {
   const d = db();
   const types = d.academy.achievementTypes;
@@ -35,7 +35,7 @@ export const pointsHelp = () => { const R = rules(); return `1-on-1 PT session <
 
 function podium(rows) {
   const top = [rows[1], rows[0], rows[2]];
-  return `<div class="podium">${top.map((r, i) => r ? `<a class="pod pod-${r.rank}" href="#/students/${r.s.id}">
+  return `<div class="podium">${top.map((r, i) => r ? `<a class="pod pod-${r.rank}" href="#/students/${esc(r.s.id)}">
       ${athleteAvatar(r.s)}<span class="pod-rank">${r.rank}</span><b>${esc(fullName(r.s))}</b><small>${r.points} pts</small><span class="pod-step"></span></a>` : `<div class="pod pod-empty"><span class="pod-step"></span></div>`).join("")}</div>`;
 }
 
@@ -67,7 +67,7 @@ function render() {
     </div>
     <div class="actions col">
       <button class="btn btn-ghost btn-sm" data-prize>Edit prize</button>
-      ${!live && leader ? (win?.given ? `<span class="badge badge-ok">Prize given ${fmtDate(win.date, { month: "short", day: "numeric" })}</span>` : `<button class="btn btn-primary btn-sm" data-given="${leader.s.id}">Mark prize given</button>`) : ""}
+      ${!live && leader ? (win?.given ? `<span class="badge badge-ok">Prize given ${fmtDate(win.date, { month: "short", day: "numeric" })}</span>` : `<button class="btn btn-primary btn-sm" data-given="${esc(leader.s.id)}">Mark prize given</button>`) : ""}
     </div>
   </section>
 
@@ -77,7 +77,7 @@ function render() {
     <section class="card flush">
       <header class="card-head pad"><h2>Leaderboard</h2><small class="muted">${rows.length} athletes scored</small></header>
       ${rows.length ? `<table class="table rank-table"><thead><tr><th>#</th><th>Athlete</th><th class="right">1-on-1</th><th class="right hide-sm">Group</th><th class="right hide-sm">Achievements</th><th class="right">Friends</th><th class="right">Points</th></tr></thead><tbody>
-        ${rows.map((r) => `<tr data-href="#/students/${r.s.id}" class="${r.rank <= 3 ? "top" : ""}"><td><span class="rank-no r${r.rank}">${r.rank}</span></td>
+        ${rows.map((r) => `<tr data-href="#/students/${esc(r.s.id)}" class="${r.rank <= 3 ? "top" : ""}"><td><span class="rank-no r${r.rank}">${r.rank}</span></td>
           <td><span class="who">${athleteAvatar(r.s)}<span><b>${esc(fullName(r.s))}</b><small>${esc(r.s.goal || r.s.level)}</small></span></span></td>
           <td class="right">${r.pt}</td><td class="right hide-sm">${r.group}</td><td class="right hide-sm">${r.ach.length ? `${r.ach.length} · ${r.achPts} pts` : "—"}</td>
           <td class="right">${r.refs.length || "—"}</td><td class="right"><b>${r.points}</b></td></tr>`).join("")}</tbody></table>` : empty("No points yet this month.")}
@@ -85,7 +85,7 @@ function render() {
     <div>
       <section class="card flush">
         <header class="card-head pad"><h2>Achievements</h2><button class="link" data-award>+ Award</button></header>
-        ${achs.length ? `<ul class="list pad-list">${achs.map((a) => { const s = byId("students", a.studentId); return s ? `<li class="row"><span class="grow"><b>${esc(a.title)}</b><small>${esc(fullName(s))} · ${fmtDate(a.date, { month: "short", day: "numeric" })}${a.note ? " · " + esc(a.note) : ""}</small></span>${badge("+" + a.points, "ok")}<button class="icon-btn" data-del-ach="${a.id}" title="Remove">✕</button></li>` : ""; }).join("")}</ul>` : empty("No achievements awarded this month.")}
+        ${achs.length ? `<ul class="list pad-list">${achs.map((a) => { const s = byId("students", a.studentId); return s ? `<li class="row"><span class="grow"><b>${esc(a.title)}</b><small>${esc(fullName(s))} · ${fmtDate(a.date, { month: "short", day: "numeric" })}${a.note ? " · " + esc(a.note) : ""}</small></span>${badge("+" + a.points, "ok")}<button class="icon-btn" data-del-ach="${esc(a.id)}" title="Remove">✕</button></li>` : ""; }).join("")}</ul>` : empty("No achievements awarded this month.")}
       </section>
       <section class="card flush">
         <header class="card-head pad"><h2>Friends brought in</h2></header>
@@ -105,7 +105,7 @@ export default {
     $("[data-settings]", el).onclick = () => (location.hash = "#/settings");
     $("[data-prize]", el).onclick = () => modal({
       title: `Prize — ${monthLabel(month)}`, submit: "Save prize",
-      body: field("Prize", "prize", prizeFor(month), { required: true, placeholder: "e.g. Free PT session + KYRI t-shirt" }),
+      body: field("Prize", "prize", prizeFor(month), { required: true, placeholder: "e.g. Free PT session + branded t-shirt" }),
       onSubmit({ prize }) { update((d) => (d.prizes[month] = prize)); toast("Prize saved"); },
     });
     $("[data-given]", el) && ($("[data-given]", el).onclick = (e) => update((d) => (d.winners[month] = { studentId: e.target.dataset.given, given: true, date: today(), prize: prizeFor(month) })));

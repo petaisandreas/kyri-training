@@ -1,0 +1,32 @@
+{
+  "id": "demo-coach",
+  "isDefault": false,
+  "appName": "PEAK",
+  "coachAppName": "PEAK Coach",
+  "businessName": "PEAK Performance",
+  "coach": { "name": "Alex Morgan", "short": "Alex", "initials": "AM" },
+  "contact": { "email": "hello@peak.example", "instagram": "peakperformance.demo" },
+  "locale": { "currency": "GBP", "numberLocale": "en-GB" },
+  "storagePrefix": "demo-coach",
+  "paymentRefPrefix": "PEAK",
+  "ranking": { "prize": "Free 1-on-1 session + PEAK hoodie" },
+  "seed": { "location": "Main Gym" },
+  "site": {
+    "title": "PEAK Performance — Personal training & conditioning",
+    "description": "Personal training with Alex Morgan: strength, conditioning and cardio for athletes and for everyone who wants to get fit. Book your sessions online.",
+    "athleteManifestDescription": "Book your sessions with Alex.",
+    "coachManifestDescription": "Alex's coach dashboard: athletes, bookings and billing.",
+    "heroLead": "1-on-1 personal training and small-group sessions with Alex Morgan. Competitive athletes come for their conditioning. Everyone else comes for the cardio, strength and fat loss. Same coach, same standard, a plan built around your goal.",
+    "coachBio": "Personal trainer specialising in strength and conditioning. Alex builds the engine: athletes train here to perform when it counts, and everyone else trains to get fitter, stronger and leaner. Every session is planned around your goal."
+  },
+  "theme": {
+    "themeColor": "#0b0b0c",
+    "background": "#0b0b0c",
+    "heroBg": "#0b0b0c",
+    "heroInk": "#f4f4f2",
+    "dark": { "accent": "#ff5a1f", "accentInk": "#0b0b0c", "accent2": "#ffb38a" },
+    "light": { "accent": "#c2410c", "accentInk": "#ffffff", "accent2": "#9a3412" },
+    "icons": { "athlete": { "bg": "#0b0b0c", "fg": "#ff5a1f" }, "coach": { "bg": "#ffffff", "fg": "#c2410c" } }
+  },
+  "deploy": { "customDomain": "" }
+}

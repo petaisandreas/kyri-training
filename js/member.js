@@ -1,9 +1,9 @@
-// Athlete app: athletes sign in to book PT and conditioning sessions with Kyri, see their training, and pay.
-import { db, update, subscribe, uid, today, iso, addDays, byId, money, classesOn, DAYS, docStatus, isBooked, bookedCount, isFighter, sessionColor, monthlyRanking, prizeFor, thisMonth, monthName, shiftMonth, referralsOf, fullName, openInvoices, amountOwed, paymentReference, revolutLink, claimPaid } from "./store.js";
+// Athlete app: athletes sign in to book PT and conditioning sessions with their coach, see their training, and pay.
+import { db, update, subscribe, uid, today, iso, addDays, byId, money, classesOn, DAYS, docStatus, isBooked, bookedCount, isFighter, sessionColor, monthlyRanking, prizeFor, thisMonth, monthName, shiftMonth, referralsOf, fullName, openInvoices, amountOwed, paymentReference, revolutLink, claimPaid, client, KEYS, coachShort } from "./store.js";
 import { uploadDocument, viewDocument, DOC_LABEL } from "./docs-ui.js";
 import { esc, $, $$, badge, fmtDate, fmtTime, toast, empty, athleteAvatar, pickPhoto } from "./ui.js";
 
-const SESSION = "kyri:member";
+const SESSION = KEYS.member;
 const TABS = [["home", "Home", "⌂"], ["book", "Book", "▦"], ["rank", "Ranking", "★"], ["me", "Me", "◉"]];
 let tab = "home";
 let bookFilter = "";
@@ -19,7 +19,7 @@ const demoAthlete = () => db().students.find((s) => s.status === "active" && isF
 function login() {
   const demo = demoAthlete();
   return `<div class="m-login">
-    <div class="m-logo">${logo(64)}<span>KYRI</span></div>
+    <div class="m-logo">${logo(64)}<span>${esc(client.appName)}</span></div>
     <h1>Athlete sign in</h1>
     <p class="muted">Book your sessions with ${esc(db().academy.owner.split(" ")[0])}</p>
     <form id="login" class="m-card" novalidate>
@@ -87,16 +87,16 @@ const sum = (list) => list.reduce((a, i) => a + i.amount, 0);
 function payCard(s) {
   const open = openInvoices(s.id), due = open.filter((i) => i.status === "due"), pend = open.filter((i) => i.status === "pending");
   const owed = amountOwed(s.id), rejected = due.find((i) => i.rejectedAt);
-  const pendCard = pend.length ? `<div class="m-card m-pay pending"><b>Waiting for Kyri to confirm ${money(sum(pend))}</b><small>You said you paid${pend[0].reference ? ` · ref ${esc(pend[0].reference)}` : ""}. Kyri will confirm it soon.</small></div>` : "";
+  const pendCard = pend.length ? `<div class="m-card m-pay pending"><b>Waiting for ${esc(coachShort())} to confirm ${money(sum(pend))}</b><small>You said you paid${pend[0].reference ? ` · ref ${esc(pend[0].reference)}` : ""}. ${esc(coachShort())} will confirm it soon.</small></div>` : "";
   if (!due.length) return pendCard;
   const ref = paymentReference(s.id, due), link = revolutLink(owed, ref);
   return pendCard + `<div class="m-card m-pay">
-    ${rejected ? `<p class="m-pay-reject"><b>Kyri couldn't find your payment${rejected.rejectNote ? `: ${esc(rejected.rejectNote)}` : "."}</b></p>` : ""}
+    ${rejected ? `<p class="m-pay-reject"><b>${esc(coachShort())} couldn't find your payment${rejected.rejectNote ? `: ${esc(rejected.rejectNote)}` : "."}</b></p>` : ""}
     <span class="eyebrow">Payment due</span><div class="m-pay-amt">You owe ${money(owed)}</div>
     <ul class="m-pay-lines">${due.map((i) => `<li><span>${esc(i.description)}<small>Due ${fmtDate(i.due)}</small></span><b>${money(i.amount)}</b></li>`).join("")}</ul>
     ${link ? `<div class="m-pay-ref"><small>Payment reference</small><div><code>${esc(ref)}</code><button class="btn btn-sm btn-ghost" data-copy="${esc(ref)}">Copy</button></div></div>
       <a class="btn btn-primary btn-lg full" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Pay with Revolut</a>
-      <button class="btn btn-ghost full mt" data-claim>I've paid</button>` : `<p class="m-pay-offline"><b>Pay Kyri in person</b><small>Cash or bank transfer at your next session.</small></p>`}
+      <button class="btn btn-ghost full mt" data-claim>I've paid</button>` : `<p class="m-pay-offline"><b>Pay ${esc(coachShort())} in person</b><small>Cash or bank transfer at your next session.</small></p>`}
   </div>`;
 }
 
@@ -153,7 +153,7 @@ function rank(s) {
   const link = inviteLink(s);
   const friends = referralsOf(s.id);
   const lastDay = new Date(Number(month.slice(0, 4)), Number(month.slice(5)), 0).getDate();
-  return `<h1 class="m-h1">${esc(monthName(month))} ranking</h1><p class="muted">Ends ${esc(monthName(month))} ${lastDay} · #1 wins Kyri's prize</p>
+  return `<h1 class="m-h1">${esc(monthName(month))} ranking</h1><p class="muted">Ends ${esc(monthName(month))} ${lastDay} · #1 wins ${esc(coachShort())}'s prize</p>
   <div class="m-card m-me-rank">
     <div class="m-rank-big">${me ? "#" + me.rank : "—"}</div>
     <div class="grow"><b>${me ? `${me.points} points` : "No points yet"}</b><small>${me ? (me.rank === 1 ? "You're in first place. Keep it up!" : `${ahead.points - me.points + 1} pts to pass ${esc(ahead.s.first)}`) : "Book a session to get on the board"}</small></div>
@@ -161,7 +161,7 @@ function rank(s) {
   <div class="m-card m-prize"><span>🎁</span><div><small>This month's prize</small><b>${esc(prizeFor(month))}</b></div></div>
   <h2 class="m-title">Bring a friend · +${R.referral} pts</h2>
   <div class="m-card m-invite">
-    <p>Share your link. When a friend signs up with Kyri, you get <b>+${R.referral} points</b>.</p>
+    <p>Share your link. When a friend signs up with ${esc(coachShort())}, you get <b>+${R.referral} points</b>.</p>
     <input readonly value="${esc(link)}" data-link aria-label="Your invite link" />
     <button class="btn btn-primary full" data-share>Share my invite link</button>
     ${friends.length ? `<small class="muted">Friends you've brought: ${friends.map((f) => esc(f.first)).join(", ")}</small>` : ""}
@@ -195,7 +195,7 @@ function meTab(s) {
     <h1 class="m-h1">${esc(s.first)} ${esc(s.last)}</h1>
     <p class="muted">${esc(plan ? `${plan.name} · ${money(plan.price)} / ${plan.interval === "pack" ? "pack" : plan.interval}` : "No plan")}</p></div>
   <h2 class="m-title">Payments</h2>
-  <div class="m-card flush"><ul class="list m-list">${inv.map((i) => `<li class="row"><span class="grow">${esc(i.description)}<small>${fmtDate(i.date)}</small></span>${i.status === "pending" ? badge("Awaiting Kyri", "info") : ""}<b>${money(i.amount)}</b></li>`).join("") || `<li class="row muted">No payments yet</li>`}</ul></div>
+  <div class="m-card flush"><ul class="list m-list">${inv.map((i) => `<li class="row"><span class="grow">${esc(i.description)}<small>${fmtDate(i.date)}</small></span>${i.status === "pending" ? badge(`Awaiting ${coachShort()}`, "info") : ""}<b>${money(i.amount)}</b></li>`).join("") || `<li class="row muted">No payments yet</li>`}</ul></div>
   <h2 class="m-title">My documents</h2>
   <div class="m-card flush"><ul class="list m-list">${d.documents.filter((x) => x.studentId === s.id).map((x) => `<li class="row"><button class="row-link" data-doc="${esc(x.id)}"><span class="grow">${esc(x.type)}<small>${x.expires ? (x.expires < today() ? "Expired " : "Valid until ") + fmtDate(x.expires) : "No expiry"}</small></span><span class="muted">View</span></button></li>`).join("") || `<li class="row muted">No documents on file</li>`}</ul></div>
   <button class="btn btn-ghost full" data-upload-doc>+ Upload a document</button>
@@ -207,16 +207,16 @@ function meTab(s) {
 // --- shell ----------------------------------------------------------------------
 function render() {
   const s = me();
-  if (!s) { setSession(null); root.innerHTML = login(); mountLogin(); document.title = "Sign in · KYRI"; return; }
+  if (!s) { setSession(null); root.innerHTML = login(); mountLogin(); document.title = `Sign in · ${client.appName}`; return; }
   const body = { home, book, rank, me: meTab }[tab](s);
   const owed = amountOwed(s.id) > 0;
   const scroll = window.scrollY;
   root.innerHTML = `
-    <header class="m-top"><div class="brand">${logo(26)}<span>KYRI</span></div>
+    <header class="m-top"><div class="brand">${logo(26)}<span>${esc(client.appName)}</span></div>
       <button class="m-me" data-menu aria-label="Me">${athleteAvatar(s)}</button></header>
     <main class="m-main">${body}</main>
     <nav class="m-tabs">${TABS.map(([k, l, i]) => `<button data-tab="${k}" class="${tab === k ? "on" : ""}"><span>${i}${k === "home" && owed ? `<i class="m-dot"></i>` : ""}</span>${l}</button>`).join("")}</nav>`;
-  document.title = `${TABS.find((t) => t[0] === tab)[1]} · KYRI`;
+  document.title = `${TABS.find((t) => t[0] === tab)[1]} · ${client.appName}`;
   window.scrollTo(0, scroll);
   mount(s);
 }
@@ -262,14 +262,14 @@ function mount(s) {
   });
   on("[data-claim]", () => {
     const owed = amountOwed(s.id);
-    if (!owed || !confirm(`Confirm you've sent ${money(owed)} to Kyri on Revolut?\n\nKyri will check and confirm it.`)) return;
+    if (!owed || !confirm(`Confirm you've sent ${money(owed)} to ${coachShort()} on Revolut?\n\n${coachShort()} will check and confirm it.`)) return;
     claimPaid(s.id, "revolut");
-    toast("Thanks! Waiting for Kyri to confirm");
+    toast(`Thanks! Waiting for ${coachShort()} to confirm`);
   });
   on("[data-share]", async () => {
     const url = inviteLink(s);
     try {
-      if (navigator.share) await navigator.share({ title: "Train with Kyri", text: `${s.first} invited you to train with Kyri. Your first session is free:`, url });
+      if (navigator.share) await navigator.share({ title: `Train with ${coachShort()}`, text: `${s.first} invited you to train with ${coachShort()}. Your first session is free:`, url });
       else { await navigator.clipboard.writeText(url); toast("Invite link copied"); }
     } catch (e) { if (e?.name !== "AbortError") { $("[data-link]", root)?.select(); toast("Copy the link above to share it", "warn"); } }
   });

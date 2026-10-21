@@ -1,0 +1,31 @@
+{
+  "id": "template",
+  "isDefault": false,
+  "appName": "BRAND",
+  "businessName": "Your Business Name",
+  "coach": { "name": "Coach Name", "short": "Coach", "initials": "CN" },
+  "contact": { "email": "hello@example.com", "instagram": "yourhandle" },
+  "locale": { "currency": "EUR", "numberLocale": "en-IE" },
+  "storagePrefix": "template",
+  "paymentRefPrefix": "BRAND",
+  "ranking": { "prize": "Free 1-on-1 session + branded t-shirt" },
+  "seed": { "location": "Main Gym" },
+  "site": {
+    "title": "Your Business Name — Personal training & conditioning",
+    "description": "Personal training with Coach Name: strength, conditioning and cardio for athletes and for everyone who wants to get fit. Book your sessions online.",
+    "athleteManifestDescription": "Book your sessions with Coach.",
+    "coachManifestDescription": "Coach's dashboard: athletes, bookings and billing.",
+    "heroLead": "1-on-1 personal training and small-group sessions with Coach Name. Same coach, same standard, a plan built around your goal.",
+    "coachBio": "Personal trainer specialising in strength and conditioning. Every session is planned around your goal."
+  },
+  "theme": {
+    "themeColor": "#0b0b0c",
+    "background": "#0b0b0c",
+    "heroBg": "#0b0b0c",
+    "heroInk": "#f4f4f2",
+    "dark": { "accent": "#3b82f6", "accentInk": "#0b0b0c", "accent2": "#9db4ff" },
+    "light": { "accent": "#1d4ed8", "accentInk": "#ffffff", "accent2": "#1e3a8a" },
+    "icons": { "athlete": { "bg": "#0b0b0c", "fg": "#3b82f6" }, "coach": { "bg": "#ffffff", "fg": "#1d4ed8" } }
+  },
+  "deploy": { "customDomain": "" }
+}

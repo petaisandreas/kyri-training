@@ -3,22 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#000000" />
-  <title>KYRI Coach</title>
+  <meta name="theme-color" content="{{themeColor}}" />
+  <title>{{coachAppName}}</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="manifest" href="coach.webmanifest" />
   <link rel="apple-touch-icon" href="assets/coach-icon-apple.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-  <meta name="apple-mobile-web-app-title" content="KYRI Coach" />
+  <meta name="apple-mobile-web-app-title" content="{{coachAppName}}" />
   <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/client.css" />
   <link rel="stylesheet" href="css/app.css" />
-  <script>try { const t = localStorage.getItem("kyri:theme"); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+  <script>try { const t = localStorage.getItem("{{storagePrefix}}:theme"); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
 </head>
 <body class="app">
   <aside class="sidebar">
-    <a href="index.html" class="brand"><span class="logo-mark" style="width:30px;height:30px"></span><span>KYRI<b>Coach</b></span></a>
+    <a href="index.html" class="brand"><span class="logo-mark" style="width:30px;height:30px"></span><span>{{appName}}<b>Coach</b></span></a>
     <div class="academy-pill"><span class="dot"></span><span id="academy-name"></span></div>
     <nav id="nav"></nav>
     <div class="sidebar-foot"><a href="member.html" target="_blank">Athlete app ↗</a><a href="index.html" target="_blank">Public site ↗</a></div>
@@ -32,7 +33,7 @@
         <div id="search-results" hidden></div>
       </div>
       <button id="theme-btn" class="icon-btn" aria-label="Toggle theme" title="Toggle theme">◐</button>
-      <span class="avatar me">KN</span>
+      <span class="avatar me" id="me-avatar">{{coachInitials}}</span>
     </header>
     <main id="view" tabindex="-1"></main>
   </div>

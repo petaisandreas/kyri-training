@@ -18,7 +18,7 @@ export function payFlow(s) {
     title: `Payment — ${fullName(s)}`,
     submit: "Mark paid",
     body: `<p class="muted" style="margin-top:0">${esc(s.first)} is in ${gs.length} programs. Which does this payment cover?</p>
-      ${gs.map((g) => `<label class="check pay-pick"><input type="checkbox" data-multi="1" name="groups" value="${g.id}" checked/> <span class="grow">${esc(g.name)}</span><b>${money(g.price)}</b></label>`).join("")}`,
+      ${gs.map((g) => `<label class="check pay-pick"><input type="checkbox" data-multi="1" name="groups" value="${esc(g.id)}" checked/> <span class="grow">${esc(g.name)}</span><b>${money(g.price)}</b></label>`).join("")}`,
     onSubmit({ groups = [] }) {
       if (!groups.length) { toast("Pick at least one program", "warn"); return false; }
       markPaid(s.id, groups); toast("Payment recorded");
@@ -46,7 +46,7 @@ function studentForm(s = {}) {
     ${field("App password", "password", s.password || DEMO_PASSWORD, { required: true })}
     ${field("Joined", "joined", s.joined || today(), { type: "date" })}
     ${field("Brought in by (referral)", "referredBy", s.referredBy || "", { options: [["", "Nobody"], ...d.students.filter((x) => x.id !== s.id).sort((a, b) => a.first.localeCompare(b.first)).map((x) => [x.id, fullName(x)])], span: 2 })}
-    <div class="field span-2"><span>Programs (monthly billing)</span><div class="group-picks">${d.groups.map((g) => `<label class="check"><input type="checkbox" data-multi="1" name="groupIds" value="${g.id}" ${(s.groupIds || []).includes(g.id) ? "checked" : ""}/> ${esc(g.name)} <small class="muted">${money(g.price)}/mo</small></label>`).join("")}</div></div>
+    <div class="field span-2"><span>Programs (monthly billing)</span><div class="group-picks">${d.groups.map((g) => `<label class="check"><input type="checkbox" data-multi="1" name="groupIds" value="${esc(g.id)}" ${(s.groupIds || []).includes(g.id) ? "checked" : ""}/> ${esc(g.name)} <small class="muted">${money(g.price)}/mo</small></label>`).join("")}</div></div>
     ${field("Coach notes", "notes", s.notes, { type: "textarea", span: 2 })}
     ${field("Liability waiver signed", "waiver", s.waiver, { type: "checkbox" })}
   </div>`;
@@ -96,7 +96,7 @@ function list() {
     return { n: ms.length, late: ms.filter((st) => paymentStatus(st) === "overdue").length, due: ms.filter((st) => paymentStatus(st) === "due").length };
   };
   const all = groupStats("all");
-  const tab = (id, name, sub, st, color) => `<button class="gtab ${filter.group === id ? "on" : ""}" data-group="${id}" style="--g:${color}">
+  const tab = (id, name, sub, st, color) => `<button class="gtab ${filter.group === id ? "on" : ""}" data-group="${esc(id)}" style="--g:${color}">
       <span class="gtab-name">${esc(name)}</span><span class="gtab-sub">${sub}</span>
       ${st.late ? `<span class="gtab-badge late" title="Overdue">${st.late}</span>` : st.due ? `<span class="gtab-badge" title="Due soon">${st.due}</span>` : ""}</button>`;
   const month = new Date().toLocaleString("en-US", { month: "long" });
@@ -129,12 +129,12 @@ function list() {
   <div class="card flush">
     ${rows.length ? `<table class="table">
       <thead><tr><th>Athlete</th><th class="hide-sm">Martial art</th><th class="hide-sm">Type / goal</th><th>${esc(month)}</th><th></th></tr></thead>
-      <tbody>${rows.map(({ st, pay }) => `<tr data-href="#/students/${st.id}">
+      <tbody>${rows.map(({ st, pay }) => `<tr data-href="#/students/${esc(st.id)}">
           <td><span class="who">${athleteAvatar(st)}<span><b>${esc(fullName(st))}</b><small>${esc(st.phone || st.email)}</small></span></span></td>
           <td class="hide-sm">${discChips(st.disciplines)}</td>
           <td class="hide-sm"><b class="small">${esc(st.level)}</b>${isFighter(st) ? `<small><span class="record">${recordText(st)}</span> · ${esc(st.goal || "")}</small>` : `<small>${esc(st.goal || "")}</small>`}</td>
           <td>${st.status === "active" ? badge(PAY_LABEL[pay], PAY_TONE[pay]) : badge(st.status, STATUS_TONE[st.status])}</td>
-          <td class="right">${st.status === "active" && pay !== "paid" ? `<button class="btn btn-sm btn-primary" data-paid="${st.id}">Mark paid · ${money(monthlyFee(st))}</button>` : ""}</td></tr>`).join("")}</tbody></table>` : empty("No athletes match these filters.")}
+          <td class="right">${st.status === "active" && pay !== "paid" ? `<button class="btn btn-sm btn-primary" data-paid="${esc(st.id)}">Mark paid · ${money(monthlyFee(st))}</button>` : ""}</td></tr>`).join("")}</tbody></table>` : empty("No athletes match these filters.")}
   </div>`;
 }
 
@@ -182,7 +182,7 @@ function detail(id) {
       <div class="row gap">${discChips(s.disciplines, { max: 9, none: "" })} ${badge(s.status, STATUS_TONE[s.status])} ${s.status === "active" ? badge(new Date().toLocaleString("en-US", { month: "long" }) + ": " + PAY_LABEL[pay], PAY_TONE[pay]) : ""} ${s.waiver ? badge("Waiver on file", "ok") : badge("Waiver missing", "warn")} ${(() => { const h = docStatus(s.id); return badge("Medical: " + DOC_LABEL[h.status].toLowerCase(), DOC_TONE[h.status]); })()}</div>
     </div>
     <div class="actions col">
-      ${unpaid ? `<button class="btn btn-primary" data-paid="${s.id}">Mark paid · ${money(monthlyFee(s))}</button>` : ""}
+      ${unpaid ? `<button class="btn btn-primary" data-paid="${esc(s.id)}">Mark paid · ${money(monthlyFee(s))}</button>` : ""}
       <button class="btn ${unpaid ? "btn-ghost" : "btn-primary"}" data-book>Book a session</button>
       <button class="btn btn-ghost" data-edit>Edit</button>
     </div>
@@ -222,7 +222,7 @@ function detail(id) {
         <div class="kpi"><span>Friends brought</span><strong>${refs.length}</strong><small>${me?.refs.length || 0} this month</small></div>
       </div>
       ${achs.length || refs.length ? `<div class="grid grid-2"><ul class="list">${achs.slice(0, 6).map((a) => `<li class="row"><span class="grow">🏅 ${esc(a.title)}<small>${fmtDate(a.date)}${a.note ? " · " + esc(a.note) : ""}</small></span>${badge("+" + a.points, "ok")}</li>`).join("") || `<li class="row muted">No achievements yet</li>`}</ul>
-        <ul class="list">${refs.map((f) => `<li class="row">${athleteAvatar(f)}<a class="grow" href="#/students/${f.id}">${esc(fullName(f))}<small>joined ${fmtDate(f.joined)}</small></a></li>`).join("") || `<li class="row muted">Hasn't brought a friend yet</li>`}</ul></div>` : ""}
+        <ul class="list">${refs.map((f) => `<li class="row">${athleteAvatar(f)}<a class="grow" href="#/students/${esc(f.id)}">${esc(fullName(f))}<small>joined ${fmtDate(f.joined)}</small></a></li>`).join("") || `<li class="row muted">Hasn't brought a friend yet</li>`}</ul></div>` : ""}
       <p class="muted small">${pointsHelp()}</p>
     </section>`;
   })()}
@@ -230,11 +230,11 @@ function detail(id) {
   <div class="grid grid-2">
     <section class="card flush">
       <header class="card-head pad"><h2>Upcoming bookings</h2><a class="link" href="#/schedule">Schedule →</a></header>
-      ${up.length ? `<table class="table"><tbody>${up.map(({ b, c }) => `<tr><td>${fmtDate(b.date, { weekday: "short", month: "short", day: "numeric" })}</td><td><b>${esc(c.name)}</b><small>${fmtTime(c.start)} · ${c.duration} min</small></td><td class="right"><button class="btn btn-sm btn-ghost" data-unbook="${b.id}">Cancel</button></td></tr>`).join("")}</tbody></table>` : empty("Nothing booked in the next 2 weeks.")}
+      ${up.length ? `<table class="table"><tbody>${up.map(({ b, c }) => `<tr><td>${fmtDate(b.date, { weekday: "short", month: "short", day: "numeric" })}</td><td><b>${esc(c.name)}</b><small>${fmtTime(c.start)} · ${c.duration} min</small></td><td class="right"><button class="btn btn-sm btn-ghost" data-unbook="${esc(b.id)}">Cancel</button></td></tr>`).join("")}</tbody></table>` : empty("Nothing booked in the next 2 weeks.")}
     </section>
     <section class="card flush">
       <header class="card-head pad"><h2>Session history</h2></header>
-      ${hist.length ? `<table class="table"><tbody>${hist.slice(0, 12).map((a) => `<tr><td>${fmtDate(a.date)}</td><td>${esc(byId("classes", a.classId)?.name || "Session")}</td><td class="right"><button class="icon-btn" data-del-att="${a.id}" title="Remove">✕</button></td></tr>`).join("")}</tbody></table>` : empty("No sessions yet.")}
+      ${hist.length ? `<table class="table"><tbody>${hist.slice(0, 12).map((a) => `<tr><td>${fmtDate(a.date)}</td><td>${esc(byId("classes", a.classId)?.name || "Session")}</td><td class="right"><button class="icon-btn" data-del-att="${esc(a.id)}" title="Remove">✕</button></td></tr>`).join("")}</tbody></table>` : empty("No sessions yet.")}
     </section>
   </div>
   <div class="grid grid-2">
@@ -246,7 +246,7 @@ function detail(id) {
       <header class="card-head pad"><h2>Documents</h2><button class="btn btn-sm btn-primary" data-doc-upload>+ Upload</button></header>
       ${docs.length ? `<table class="table"><tbody>${docs.map((x) => {
         const exp = x.expires && x.expires < today() ? badge("expired", "danger") : x.expires ? `<small>valid until ${fmtDate(x.expires)}</small>` : "<small>no expiry</small>";
-        return `<tr class="clickable" data-doc="${x.id}"><td><b>${esc(x.type)}</b><small>${esc(x.name)} · ${fmtSize(x.size)}</small></td><td class="right">${exp}</td></tr>`;
+        return `<tr class="clickable" data-doc="${esc(x.id)}"><td><b>${esc(x.type)}</b><small>${esc(x.name)} · ${fmtSize(x.size)}</small></td><td class="right">${exp}</td></tr>`;
       }).join("")}</tbody></table>` : empty("No documents yet — upload a medical clearance or waiver.")}
     </section>
   </div>
