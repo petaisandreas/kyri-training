@@ -24,7 +24,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npm run build
+      # Only Kyri is published for now; other clients (e.g. demo-coach) stay in the repo and build locally.
+      - run: node scripts/build.mjs --only kyri --as-root
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
