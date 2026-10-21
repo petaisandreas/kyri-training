@@ -1,5 +1,7 @@
-import { db, today, iso, addDays, money, fullName, byId, classesOn, DAYS, docStatus, paymentStatus, DISCIPLINES, DISCIPLINE_NAMES, LEVELS, isFighter, recordText, monthlyRanking, prizeFor, thisMonth, monthName } from "../store.js";
-import { esc, barChart, fmtTime, athleteAvatar, badge, progress } from "../ui.js";
+import { db, today, iso, addDays, money, fullName, byId, classesOn, DAYS, docStatus, paymentStatus, DISCIPLINES, DISCIPLINE_NAMES, LEVELS, isFighter, recordText, monthlyRanking, prizeFor, thisMonth, monthName, pendingPayments, confirmPayment, rejectPayment } from "../store.js";
+import { esc, $$, barChart, fmtTime, athleteAvatar, badge, progress, modal, field, toast } from "../ui.js";
+
+const fmtClaimed = (iso) => (iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "");
 
 export default {
   title: "Dashboard",
@@ -9,7 +11,8 @@ export default {
     const active = d.students.filter((s) => s.status === "active");
     const monthStart = t.slice(0, 7);
     const collected = d.invoices.filter((i) => i.date.startsWith(monthStart) && i.status === "paid").reduce((a, i) => a + i.amount, 0);
-    const outstanding = d.invoices.filter((i) => i.status !== "paid");
+    const outstanding = d.invoices.filter((i) => i.status === "due");
+    const pend = pendingPayments();
     const weekAgo = iso(addDays(new Date(), -7));
     const weekSessions = d.attendance.filter((a) => a.date >= weekAgo).length;
     const nextWeek = iso(addDays(new Date(), 7));
@@ -43,6 +46,10 @@ export default {
       <div class="kpi"><span>Bookings next 7 days</span><strong>${upcomingBookings.length}</strong><small>${openLeads.length} open leads</small></div>
     </section>
 
+    ${pend.length ? `<section class="card"><header class="card-head"><h2>Payments to confirm (${pend.length})</h2><a href="#/billing" class="link">Billing →</a></header>
+      <ul class="list">${pend.map(({ inv, s }) => `<li class="row">${athleteAvatar(s)}<span class="grow"><b>${esc(fullName(s))}</b> · ${money(inv.amount)}<small>${esc(inv.description)}${inv.reference ? ` · ref ${esc(inv.reference)}` : ""}${inv.claimedAt ? ` · claimed ${esc(fmtClaimed(inv.claimedAt))}` : ""}</small></span>
+        <button class="btn btn-sm btn-primary" data-confirm="${esc(inv.id)}">Confirm</button><button class="btn btn-sm btn-ghost" data-reject="${esc(inv.id)}">Reject</button></li>`).join("")}</ul></section>` : ""}
+
     <div class="grid grid-2-1">
       <section class="card">
         <header class="card-head"><h2>Training load — last 14 days</h2><a href="#/reports" class="link">Reports →</a></header>
@@ -64,8 +71,8 @@ export default {
         const st = active.map((s) => paymentStatus(s));
         const n = (k) => st.filter((x) => x === k).length;
         const pct = (k) => (active.length ? (n(k) / active.length) * 100 : 0);
-        return `<div class="paybar"><span class="ok" style="width:${pct("paid")}%"></span><span class="warn" style="width:${pct("due")}%"></span><span class="danger" style="width:${pct("overdue")}%"></span></div>
-        <div class="paylegend"><span><i class="ok"></i>${n("paid")} paid</span><span><i class="warn"></i>${n("due")} due soon</span><span><i class="danger"></i>${n("overdue")} overdue</span></div>
+        return `<div class="paybar"><span class="ok" style="width:${pct("paid")}%"></span><span class="info" style="width:${pct("pending")}%"></span><span class="warn" style="width:${pct("due")}%"></span><span class="danger" style="width:${pct("overdue")}%"></span></div>
+        <div class="paylegend"><span><i class="ok"></i>${n("paid")} paid</span><span><i class="info"></i>${n("pending")} to confirm</span><span><i class="warn"></i>${n("due")} due soon</span><span><i class="danger"></i>${n("overdue")} overdue</span></div>
         <div class="group-grid">${d.groups.map((g) => {
           const ms = active.filter((s) => (s.groupIds || []).includes(g.id));
           const paid = ms.filter((s) => paymentStatus(s) === "paid").length, late = ms.filter((s) => paymentStatus(s) === "overdue").length;
@@ -88,7 +95,7 @@ export default {
       <section class="card">
         <header class="card-head"><h2>Needs attention</h2></header>
         <ul class="list">
-          <li class="row"><a class="grow" href="#/billing">Unpaid / failed invoices</a>${badge(outstanding.length, outstanding.length ? "warn" : "ok")}</li>
+          <li class="row"><a class="grow" href="#/billing">Unpaid invoices</a>${badge(outstanding.length, outstanding.length ? "warn" : "ok")}</li>
           <li class="row"><a class="grow" href="#/documents">Medical clearances to renew</a>${(() => { const n = active.filter((s) => docStatus(s.id).status !== "valid").length; return badge(n, n ? "danger" : "ok"); })()}</li>
           <li class="row"><span class="grow">Missing waivers</span>${badge(active.filter((s) => !s.waiver).length, "warn")}</li>
           <li class="row"><a class="grow" href="#/leads">New leads to contact</a>${badge(d.leads.filter((l) => l.stage === "New").length, "info")}</li>
@@ -114,5 +121,19 @@ export default {
         }).join("") || `<p class="muted">No bookings yet.</p>`}</div>
       </section>
     </div>`;
+  },
+  mount(el) {
+    $$("[data-confirm]", el).forEach((b) => (b.onclick = () => { confirmPayment(b.dataset.confirm); toast("Payment confirmed"); }));
+    $$("[data-reject]", el).forEach((b) => (b.onclick = () => {
+      const inv = db().invoices.find((i) => i.id === b.dataset.reject);
+      if (!inv) return;
+      modal({
+        title: "Reject payment",
+        submit: "Reject",
+        body: `<p class="muted">${esc(fullName(byId("students", inv.studentId)))} · ${money(inv.amount)}. The athlete will see this and the invoice goes back to due.</p>
+          ${field("Note for the athlete (optional)", "note", "", { placeholder: "e.g. I didn't see it in Revolut yet" })}`,
+        onSubmit(v) { rejectPayment(inv.id, v.note); toast("Payment rejected", "warn"); },
+      });
+    }));
   },
 };

@@ -6,8 +6,8 @@ import { esc, athleteAvatar, pickPhoto, $, $$, discChips, badge, fmtDate, fmtTim
 
 let filter = { q: "", status: "active", pay: "", group: "all", disc: "" };
 const STATUS_TONE = { active: "ok", frozen: "info", cancelled: "neutral" };
-export const PAY_TONE = { paid: "ok", due: "warn", overdue: "danger", inactive: "neutral" };
-export const PAY_LABEL = { paid: "Paid", due: "Due soon", overdue: "Overdue", inactive: "—" };
+export const PAY_TONE = { paid: "ok", pending: "info", due: "warn", overdue: "danger", inactive: "neutral" };
+export const PAY_LABEL = { paid: "Paid", pending: "Awaiting confirmation", due: "Due soon", overdue: "Overdue", inactive: "—" };
 const ordinal = (n) => n + (n % 10 > 3 || n % 10 === 0 || Math.floor(n / 10) === 1 ? "th" : ["th", "st", "nd", "rd"][n % 10]);
 
 /** One-tap payment; members in several groups pick which group(s) this payment covers. */
@@ -89,7 +89,7 @@ function list() {
   const base = d.students.filter((st) => inGroup(st) && (!filter.status || st.status === filter.status));
   const withPay = base.map((st) => ({ st, pay: paymentStatus(st) }));
   const rows = withPay.filter(({ st, pay }) => (!filter.pay || pay === filter.pay) && (!q || `${st.first} ${st.last} ${st.email} ${st.phone}`.toLowerCase().includes(q)))
-    .sort((a, b) => ["overdue", "due", "paid", "inactive"].indexOf(a.pay) - ["overdue", "due", "paid", "inactive"].indexOf(b.pay) || a.st.last.localeCompare(b.st.last));
+    .sort((a, b) => ["overdue", "pending", "due", "paid", "inactive"].indexOf(a.pay) - ["overdue", "pending", "due", "paid", "inactive"].indexOf(b.pay) || a.st.last.localeCompare(b.st.last));
   const payCount = (k) => withPay.filter((x) => x.pay === k).length;
   const groupStats = (gid) => {
     const ms = d.students.filter((st) => st.status === "active" && (gid === "all" || (st.groupIds || []).includes(gid)));
@@ -122,7 +122,7 @@ function list() {
     : base.length ? `<div class="banner banner-ok"><b>Everyone is paid up</b> for ${month}. 🎉</div>` : ""}
   <div class="toolbar">
     <input class="input" type="search" placeholder="Search name or phone…" value="${esc(filter.q)}" data-q />
-    <div class="seg">${[["", "All"], ["paid", "Paid"], ["due", "Due soon"], ["overdue", "Overdue"]].map(([k, l]) => `<button data-pay="${k}" class="${filter.pay === k ? "on" : ""}">${l}${k ? ` <small>${payCount(k)}</small>` : ""}</button>`).join("")}</div>
+    <div class="seg">${[["", "All"], ["paid", "Paid"], ["pending", "Awaiting"], ["due", "Due soon"], ["overdue", "Overdue"]].map(([k, l]) => `<button data-pay="${k}" class="${filter.pay === k ? "on" : ""}">${l}${k ? ` <small>${payCount(k)}</small>` : ""}</button>`).join("")}</div>
     <select class="input" data-disc><option value="">Everyone</option><option value="fighters" ${filter.disc === "fighters" ? "selected" : ""}>Martial artists</option><option value="none" ${filter.disc === "none" ? "selected" : ""}>Fitness clients</option>${DISCIPLINE_NAMES.map((n) => `<option ${filter.disc === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
     <select class="input" data-status>${[["active", "Active"], ["frozen", "Frozen"], ["cancelled", "Cancelled"], ["", "Any status"]].map(([k, l]) => `<option value="${k}" ${filter.status === k ? "selected" : ""}>${l}</option>`).join("")}</select>
   </div>
@@ -240,7 +240,7 @@ function detail(id) {
   <div class="grid grid-2">
     <section class="card flush">
       <header class="card-head pad"><h2>Invoices</h2><a class="link" href="#/billing">Billing →</a></header>
-      ${inv.length ? `<table class="table"><tbody>${inv.slice(0, 10).map((i) => `<tr><td>${fmtDate(i.date)}</td><td>${esc(i.description)}</td><td>${money(i.amount)}</td><td>${badge(i.status, i.status === "paid" ? "ok" : i.status === "due" ? "warn" : "danger")}</td></tr>`).join("")}</tbody></table>` : empty("No invoices.")}
+      ${inv.length ? `<table class="table"><tbody>${inv.slice(0, 10).map((i) => `<tr><td>${fmtDate(i.date)}</td><td>${esc(i.description)}</td><td>${money(i.amount)}</td><td>${badge(i.status === "pending" ? "awaiting confirmation" : i.status, i.status === "paid" ? "ok" : i.status === "pending" ? "info" : "warn")}</td></tr>`).join("")}</tbody></table>` : empty("No invoices.")}
     </section>
     <section class="card flush">
       <header class="card-head pad"><h2>Documents</h2><button class="btn btn-sm btn-primary" data-doc-upload>+ Upload</button></header>

@@ -1,4 +1,4 @@
-import { db, update, uid, resetDemo, money } from "../store.js";
+import { db, update, uid, resetDemo, migrateData, money, revolutUsername, setRevolutUsername, revolutLink } from "../store.js";
 import { esc, $, $$, field, readForm, toast } from "../ui.js";
 
 export default {
@@ -24,6 +24,14 @@ export default {
         <p class="muted">Athletes show as <b>due soon</b> until this day of the month, then <b>overdue</b>.</p>
         <div class="form-grid">${field("Grace period ends on day", "graceDay", a.graceDay || 10, { type: "number", min: 1, step: 1 })}</div>
         <button class="btn btn-primary mt">Save</button>
+      </form>
+      <form class="card" data-revolut>
+        <header class="card-head"><h2>Revolut payments</h2></header>
+        <p class="muted">Athletes pay you through your Revolut.me link, then tap "I've paid". You confirm each payment on the Dashboard. Leave empty to ask for payment in person.</p>
+        <label class="field"><span>Revolut username</span><input name="username" value="${esc(revolutUsername())}" placeholder="@kyri or https://revolut.me/kyri" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="rev-preview rev-err" /></label>
+        <p class="small mt" id="rev-preview"></p>
+        <p class="m-error small" id="rev-err" role="alert" hidden></p>
+        <div class="row gap mt"><button class="btn btn-primary">Save</button><button type="button" class="btn btn-ghost" data-test-link>Test link</button></div>
       </form>
       <form class="card" data-ranking>
         <header class="card-head"><h2>Monthly ranking</h2><a class="link" href="#/rankings">Leaderboard →</a></header>
@@ -66,6 +74,23 @@ export default {
   mount(el) {
     $("[data-academy]", el).onsubmit = (e) => { e.preventDefault(); const v = readForm(e.target); update((d) => Object.assign(d.academy, v)); toast("Profile saved"); };
     $("[data-pay-rules]", el).onsubmit = (e) => { e.preventDefault(); const v = readForm(e.target); update((d) => (d.academy.graceDay = Math.min(28, Math.max(1, v.graceDay || 10)))); toast("Saved"); };
+    const rf = $("[data-revolut]", el), rp = $("#rev-preview", el), re = $("#rev-err", el);
+    const norm = (s) => s.trim().replace(/^https?:\/\/(www\.)?revolut\.me\//i, "").replace(/^@/, "").replace(/[/?#].*$/, "");
+    const preview = () => { const u = norm(rf.username.value); rp.innerHTML = u ? `Athletes will open <b>https://revolut.me/${esc(u)}</b>` : "No username set: athletes will see \"Pay Kyri in person\"."; };
+    preview();
+    rf.username.oninput = () => { re.hidden = true; preview(); };
+    rf.onsubmit = (e) => {
+      e.preventDefault();
+      const r = setRevolutUsername(rf.username.value);
+      if (!r.ok) { re.textContent = r.error || "That username doesn't look right."; re.hidden = false; return; }
+      toast(r.username ? "Revolut username saved" : "Revolut payments turned off");
+    };
+    $("[data-test-link]", el).onclick = () => {
+      if (norm(rf.username.value) !== revolutUsername()) return toast("Save the username first", "warn");
+      const url = revolutLink(1, "KYRI test");
+      if (!url) return toast("Add a Revolut username first", "warn");
+      window.open(url, "_blank", "noopener,noreferrer");
+    };
     $("[data-ranking]", el).onsubmit = (e) => { e.preventDefault(); const v = readForm(e.target); update((d) => Object.assign(d.academy.ranking, { pt: v.pt || 0, group: v.group || 0, referral: v.referral || 0, prize: v.prize })); toast("Ranking rules saved"); };
     $("[data-add-ach]", el).onclick = () => {
       const title = prompt("Achievement name (e.g. First 5k run)");
@@ -92,7 +117,8 @@ export default {
       try {
         const data = JSON.parse(await e.target.files[0].text());
         if (!data.students || !data.academy) throw new Error();
-        update((d) => { Object.keys(d).forEach((k) => delete d[k]); Object.assign(d, data); });
+        const clean = migrateData(data); // throws on a malformed file, leaving current data untouched
+        update((d) => { Object.keys(d).forEach((k) => delete d[k]); Object.assign(d, clean); });
         toast("Backup restored");
       } catch { toast("That file isn't a KYRI backup", "warn"); }
     };

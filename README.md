@@ -30,7 +30,8 @@ Athletes sign in with their email and password and can:
 - add or change their profile photo, which Kyri also sees
 - see their monthly ranking, points, the prize and the leaderboard, and share their invite link
 - see their goal, training streak and session history (fighters also see their martial art and record)
-- join fights & events, upload documents, pay invoices
+- join fights & events and upload documents
+- **pay Kyri with Revolut**: Home shows what they owe with a payment reference (e.g. `KYRI Andreas G Oct`). **Pay with Revolut** opens Kyri's revolut.me link with the amount and reference filled in, then **I have paid** marks the invoices as *pending*. Kyri sees them under **Payments to confirm** (Dashboard and Billing) and taps **Confirm** (paid) or **Reject** (back to due, with a note the athlete sees). Without a Revolut username in Settings, athletes just see the amount and "Pay Kyri in person".
 
 Demo login: press **"Fill it in for me"** on the sign-in screen (every seeded athlete's password is `train123`).
 
@@ -53,4 +54,10 @@ You can reset it from **Settings → Reset demo data**. Demo profile photos are 
 - `css/tokens.css` (black & white theme, dark default with a light alternate), `css/app.css`, `css/member.css`, `css/site.css`
 
 ## Before going live
-This is a demo. Passwords are stored in plain text in the browser. A real deployment needs a backend with proper auth (e.g. Postgres + an API, or Supabase), a payment provider, and SMS/email for reminders.
+This is a demo. Passwords are stored in plain text in the browser. A real deployment needs a backend with proper auth (e.g. Postgres + an API, or Supabase), and SMS/email for reminders.
+
+**Payments**
+- Set Kyri's username in **Settings → Revolut** (`@kyri` or `https://revolut.me/kyri`).
+- A personal Revolut account has no API or webhooks, so Kyri has to confirm each payment by hand (checking the Revolut app for the reference). The "I have paid" button is only the athlete's claim, never proof.
+- The revolut.me link's `amount`, `currency` and `note` parameters are undocumented. The amount is assumed to be in cents (`revolutAmount()` in `js/store.js`). Do one real test payment and change that one function if it is wrong.
+- Fully automatic confirmation needs **Revolut Business** (an API-enabled plan plus a merchant account; card payments cost about 1% + €0.20 per EEA card payment, check current pricing), a small HTTPS backend to receive the webhooks, and a real database instead of `localStorage`.

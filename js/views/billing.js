@@ -1,9 +1,20 @@
-import { db, update, uid, today, iso, addDays, fullName, byId, money } from "../store.js";
+import { db, update, uid, today, iso, addDays, fullName, byId, money, pendingPayments, confirmPayment, rejectPayment } from "../store.js";
 import { esc, $$, badge, fmtDate, modal, field, toast, empty } from "../ui.js";
 
 let tab = "invoices";
 let statusFilter = "";
-const TONE = { paid: "ok", due: "warn", failed: "danger" };
+const TONE = { paid: "ok", due: "warn", pending: "info" };
+const fmtClaimed = (iso) => (iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "");
+
+function rejectForm(inv) {
+  modal({
+    title: "Reject payment",
+    submit: "Reject",
+    body: `<p class="muted">${esc(fullName(byId("students", inv.studentId)))} · ${money(inv.amount)}. The athlete will see this and the invoice goes back to due.</p>
+      ${field("Note for the athlete (optional)", "note", "", { placeholder: "e.g. I didn't see it in Revolut yet" })}`,
+    onSubmit(v) { rejectPayment(inv.id, v.note); toast("Payment rejected", "warn"); },
+  });
+}
 
 function invoiceForm() {
   const d = db();
@@ -75,26 +86,27 @@ function render() {
   const thisMonth = d.invoices.filter((i) => i.date.startsWith(month));
   const paid = thisMonth.filter((i) => i.status === "paid").reduce((a, i) => a + i.amount, 0);
   const due = d.invoices.filter((i) => i.status === "due").reduce((a, i) => a + i.amount, 0);
-  const failed = d.invoices.filter((i) => i.status === "failed");
+  const pend = pendingPayments();
   const exp = d.expenses.filter((e) => e.date.startsWith(month)).reduce((a, e) => a + e.amount, 0);
 
   const invoices = d.invoices.filter((i) => !statusFilter || i.status === statusFilter).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 120);
 
   const body = {
-    invoices: `<div class="toolbar"><div class="seg">${["", "due", "failed", "paid"].map((s) => `<button data-sf="${s}" class="${statusFilter === s ? "on" : ""}">${s || "All"}</button>`).join("")}</div>
-      <span class="grow"></span><button class="btn btn-ghost" data-retry ${failed.length ? "" : "disabled"}>Retry ${failed.length} failed</button></div>
+    invoices: `<div class="toolbar"><div class="seg">${["", "due", "pending", "paid"].map((s) => `<button data-sf="${s}" class="${statusFilter === s ? "on" : ""}">${s === "pending" ? "to confirm" : s || "All"}</button>`).join("")}</div></div>
+      ${pend.length ? `<section class="card"><header class="card-head"><h2>To confirm (${pend.length})</h2></header><ul class="list">${pend.map(({ inv, s }) => `<li class="row"><span class="grow"><b>${esc(fullName(s))}</b> · ${money(inv.amount)}<small>${esc(inv.description)}${inv.reference ? ` · ref ${esc(inv.reference)}` : ""}${inv.claimedAt ? ` · claimed ${esc(fmtClaimed(inv.claimedAt))}` : ""}</small></span>
+        <button class="btn btn-sm btn-primary" data-confirm="${esc(inv.id)}">Confirm</button><button class="btn btn-sm btn-ghost" data-reject="${esc(inv.id)}">Reject</button></li>`).join("")}</ul></section>` : ""}
       <div class="card flush">${invoices.length ? `<table class="table"><thead><tr><th>Date</th><th>Athlete</th><th class="hide-sm">Description</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody>
-      ${invoices.map((i) => `<tr><td>${fmtDate(i.date)}</td><td><a href="#/students/${i.studentId}">${esc(fullName(byId("students", i.studentId)))}</a></td><td class="hide-sm">${esc(i.description)}</td><td>${money(i.amount)}</td><td>${badge(i.status, TONE[i.status])}</td>
-        <td class="right">${i.status !== "paid" ? `<button class="btn btn-sm" data-pay="${i.id}">Mark paid</button>` : `<button class="btn btn-sm btn-ghost" data-refund="${i.id}">Refund</button>`}</td></tr>`).join("")}
+      ${invoices.map((i) => `<tr><td>${fmtDate(i.date)}</td><td><a href="#/students/${i.studentId}">${esc(fullName(byId("students", i.studentId)))}</a></td><td class="hide-sm">${esc(i.description)}</td><td>${money(i.amount)}</td><td>${badge(i.status === "pending" ? "to confirm" : i.status, TONE[i.status])}</td>
+        <td class="right">${i.status === "pending" ? `<button class="btn btn-sm btn-primary" data-confirm="${esc(i.id)}">Confirm</button> <button class="btn btn-sm btn-ghost" data-reject="${esc(i.id)}">Reject</button>` : i.status !== "paid" ? `<button class="btn btn-sm" data-pay="${esc(i.id)}">Mark paid</button>` : `<button class="btn btn-sm btn-ghost" data-refund="${esc(i.id)}">Refund</button>`}</td></tr>`).join("")}
       </tbody></table>` : empty("No invoices.")}</div>`,
     plans: `<div class="toolbar"><span class="grow"></span><button class="btn btn-primary" data-new-plan>+ New plan</button></div>
       <div class="grid grid-3">${d.plans.map((p) => {
         const n = d.students.filter((s) => s.planId === p.id && s.status === "active").length;
-        return `<button class="card plan-card" data-plan="${p.id}"><span class="eyebrow">${p.interval === "pack" ? "Class pack" : p.interval === "year" ? "Yearly" : "Monthly"}</span><h3>${esc(p.name)}</h3><p class="big">${money(p.price)}</p><p class="muted">${n} active athlete${n === 1 ? "" : "s"}</p></button>`;
+        return `<button class="card plan-card" data-plan="${esc(p.id)}"><span class="eyebrow">${p.interval === "pack" ? "Class pack" : p.interval === "year" ? "Yearly" : "Monthly"}</span><h3>${esc(p.name)}</h3><p class="big">${money(p.price)}</p><p class="muted">${n} active athlete${n === 1 ? "" : "s"}</p></button>`;
       }).join("")}</div>`,
     expenses: `<div class="toolbar"><span class="grow"></span><button class="btn btn-primary" data-new-exp>+ Log expense</button></div>
       <div class="card flush"><table class="table"><thead><tr><th>Date</th><th>Category</th><th class="hide-sm">Note</th><th>Amount</th><th></th></tr></thead><tbody>
-      ${[...d.expenses].sort((a, b) => b.date.localeCompare(a.date)).map((e) => `<tr><td>${fmtDate(e.date)}</td><td>${esc(e.category)}</td><td class="hide-sm">${esc(e.note)}</td><td>${money(e.amount)}</td><td class="right"><button class="icon-btn" data-del-exp="${e.id}">✕</button></td></tr>`).join("")}
+      ${[...d.expenses].sort((a, b) => b.date.localeCompare(a.date)).map((e) => `<tr><td>${fmtDate(e.date)}</td><td>${esc(e.category)}</td><td class="hide-sm">${esc(e.note)}</td><td>${money(e.amount)}</td><td class="right"><button class="icon-btn" data-del-exp="${esc(e.id)}">✕</button></td></tr>`).join("")}
       </tbody></table></div>`,
   }[tab];
 
@@ -106,7 +118,7 @@ function render() {
   <section class="kpis">
     <div class="kpi"><span>Collected this month</span><strong>${money(paid)}</strong><small>${thisMonth.filter((i) => i.status === "paid").length} payments</small></div>
     <div class="kpi"><span>Outstanding</span><strong>${money(due)}</strong><small>${d.invoices.filter((i) => i.status === "due").length} open invoices</small></div>
-    <div class="kpi"><span>Failed payments</span><strong>${failed.length}</strong><small>${money(failed.reduce((a, i) => a + i.amount, 0))} at risk</small></div>
+    <div class="kpi"><span>To confirm</span><strong>${pend.length}</strong><small>${money(pend.reduce((a, { inv }) => a + inv.amount, 0))} awaiting you</small></div>
     <div class="kpi"><span>Net this month</span><strong>${money(paid - exp)}</strong><small>${money(exp)} expenses</small></div>
   </section>
   <nav class="tabs">${[["invoices", "Invoices"], ["plans", "Plans & packs"], ["expenses", "Expenses"]].map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? "on" : ""}">${l}</button>`).join("")}</nav>
@@ -126,12 +138,9 @@ export default {
     on("[data-plan]", (b) => planForm(byId("plans", b.dataset.plan)));
     on("[data-new-exp]", expenseForm);
     on("[data-del-exp]", (b) => update((d) => (d.expenses = d.expenses.filter((e) => e.id !== b.dataset.delExp))));
-    on("[data-pay]", (b) => { update((d) => (d.invoices.find((i) => i.id === b.dataset.pay).status = "paid")); toast("Payment recorded"); });
+    on("[data-pay]", (b) => { confirmPayment(b.dataset.pay, "cash"); toast("Payment recorded"); });
+    on("[data-confirm]", (b) => { confirmPayment(b.dataset.confirm); toast("Payment confirmed"); });
+    on("[data-reject]", (b) => rejectForm(db().invoices.find((i) => i.id === b.dataset.reject)));
     on("[data-refund]", (b) => { if (confirm("Mark this invoice as refunded (due again)?")) update((d) => (d.invoices.find((i) => i.id === b.dataset.refund).status = "due")); });
-    on("[data-retry]", () => {
-      let ok = 0;
-      update((d) => d.invoices.filter((i) => i.status === "failed").forEach((i) => { if (Math.random() < 0.6) { i.status = "paid"; ok++; } }));
-      toast(`Retried — ${ok} recovered`, ok ? "ok" : "warn");
-    });
   },
 };

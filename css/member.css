@@ -47,8 +47,6 @@ body.member { min-height: 100vh; }
 .m-stats strong { display: block; font: 900 26px/1.1 var(--display); color: var(--accent); }
 .m-stats span { font-size: 11.5px; color: var(--muted); }
 
-.m-heat { grid-template-columns: repeat(16, 1fr); }
-.m-heat span { height: 26px; }
 
 .m-plan { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .m-plan b { font: 800 20px var(--display); }
@@ -62,7 +60,7 @@ body.member { min-height: 100vh; }
 .m-product b { font-size: 14px; line-height: 1.3; }
 .m-product .price { font: 800 18px var(--display); margin: auto 0 6px; }
 
-.m-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); z-index: 10; }
+.m-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); z-index: 10; }
 .m-tabs button { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; }
 .m-tabs button span { position: relative; font-size: 18px; line-height: 1.2; }
 .m-tabs button.on { color: var(--accent); }
@@ -111,3 +109,24 @@ body.member { min-height: 100vh; }
 .m-invite input { height: 40px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); padding: 0 10px; font-size: 12.5px; width: 100%; }
 .m-tabs button { font-size: 10.5px; }
 .center { text-align: center; }
+
+.m-pay { border-color: var(--ink); }
+.m-pay.pending { border-style: dashed; border-color: var(--line); }
+.m-pay.pending small, .m-pay-lines small, .m-pay-ref small, .m-pay-offline small { display: block; color: var(--muted); font-size: 12.5px; }
+.m-pay-amt { font: 800 28px/1.2 var(--display); margin: 2px 0 8px; }
+.m-pay-reject { margin: 0 0 10px; padding: 10px 12px; border: 1px solid var(--danger); background: var(--danger-soft); color: var(--danger); border-radius: 6px; font-size: 14px; overflow-wrap: anywhere; }
+.m-pay-lines { list-style: none; margin: 0 0 12px; padding: 0; }
+.m-pay-lines li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.m-pay-ref { margin-bottom: 12px; }
+.m-pay-ref div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.m-pay-ref code { font: 700 14px var(--display); overflow-wrap: anywhere; }
+.m-pay-offline { margin: 0; }
+.m-pay .btn.full { display: flex; justify-content: center; text-decoration: none; }
+.m-how summary { cursor: pointer; font-weight: 700; padding: 2px 0; }
+.m-how[open] summary { margin-bottom: 10px; }
+.m-how .m-breakdown { margin-bottom: 4px; }
+.m-me-head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; margin-bottom: 8px; }
+.m-photo-big .avatar { width: 120px; height: 120px; font-size: 38px; border: 2px solid var(--line); }
+.m-me-head .muted { margin: 0; }
+.m-list .badge { margin-right: 8px; }
+.m-tabs button:focus-visible, .m-pay a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

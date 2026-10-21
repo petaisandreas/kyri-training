@@ -14,6 +14,8 @@ export const SESSION_TYPES = ["1-on-1 PT", "Fighter conditioning", "Cardio / HII
 export const FIGHTER_GOALS = ["Fight conditioning", "Making weight", "Fight camp", "Explosive power"];
 export const FITNESS_GOALS = ["Weight loss", "Cardio & endurance", "Strength", "General fitness", "Mobility"];
 export const LEAD_STAGES = ["New", "Contacted", "Trial booked", "Trial done", "Won", "Lost"];
+/** due -> pending (athlete says paid) -> paid (Kyri confirms). */
+export const INVOICE_STATUSES = ["due", "pending", "paid"];
 export const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export const uid = (p = "id") => p + "_" + Math.random().toString(36).slice(2, 9);
@@ -156,7 +158,7 @@ function seed() {
       const roll = r();
       invoices.push({
         id: uid("inv"), studentId: s.id, amount: plan.price, date: iso(date), due: iso(addDays(date, 7)),
-        description: plan.name, status: m > 0 ? (roll < 0.97 ? "paid" : "failed") : roll < 0.84 ? "paid" : roll < 0.94 ? "due" : "failed",
+        description: plan.name, status: m > 0 ? (roll < 0.97 ? "paid" : "due") : roll < 0.84 ? "paid" : "due",
       });
     }
   }
@@ -226,7 +228,7 @@ function seed() {
 
   return {
     academy: { name: "KYRI Training", owner: "Kyriakos Nicolaou", currency: "EUR", locations: ["Main Gym"], email: "kyri@trainwithkyri.com", instagram: "trainwithkyri", graceDay: 7,
-      ranking: defaultRanking(), achievementTypes },
+      revolut: { username: "" }, ranking: defaultRanking(), achievementTypes },
     achievements, prizes: {}, winners: {},
     staff, plans, classes, students, attendance, bookings, invoices, expenses, leads, automations, events, messages: [],
     groups: defaultGroups(),
@@ -312,22 +314,35 @@ let state = load();
 const listeners = new Set();
 
 function load() {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) return migrate(JSON.parse(raw));
-  } catch {}
+  let raw = null;
+  try { raw = localStorage.getItem(KEY); } catch {}
+  if (raw) {
+    try { return migrate(JSON.parse(raw)); }
+    catch (e) {
+      // Never overwrite a record we could not read: keep the raw string under a backup key first.
+      console.warn("Saved data could not be read; keeping a copy and starting fresh.", e);
+      try { localStorage.setItem(`${KEY}:corrupt-${Date.now()}`, raw); } catch {}
+    }
+  }
   return migrate(seed());
 }
 // Bring data saved by older versions up to the current shape.
+/** Validates and upgrades an imported/saved object; throws if it is not KYRI data. */
+export function migrateData(obj) {
+  if (!obj || typeof obj !== "object" || !obj.academy || typeof obj.academy !== "object" || !Array.isArray(obj.students)) throw new Error("Not KYRI data");
+  return migrate(obj);
+}
 function migrate(s) {
+  for (const k of ["students", "invoices", "attendance", "bookings", "leads", "classes", "plans", "events", "expenses", "staff"]) s[k] ||= [];
   s.documents ||= sampleDocuments(s.students);
   s.bookings ||= [];
   s.groups ||= defaultGroups();
   s.academy.graceDay ||= 7;
+  s.academy.revolut = { username: "", ...(s.academy.revolut || {}) };
   s.academy.ranking = { ...defaultRanking(), ...(s.academy.ranking || {}) };
   // Undo the short-lived generic "TrainHub" rebrand in saved demo data.
   if (s.academy.name === "TrainHub") s.academy.name = "KYRI Training";
-  s.academy.ranking.prize = s.academy.ranking.prize.replace("gym t-shirt", "KYRI t-shirt");
+  s.academy.ranking.prize = String(s.academy.ranking.prize ?? defaultRanking().prize).replace("gym t-shirt", "KYRI t-shirt");
   s.academy.achievementTypes ||= defaultAchievementTypes();
   s.achievements ||= [];
   s.prizes ||= {};
@@ -339,6 +354,8 @@ function migrate(s) {
     st.password ||= DEMO_PASSWORD;
   }
   assignGroups(s);
+  for (const i of s.invoices) if (!INVOICE_STATUSES.includes(i.status)) i.status = "due"; // legacy "failed"
+  ensureMonthlyIn(s);
   return s;
 }
 function persist() {
@@ -377,29 +394,147 @@ export const groupsOf = (s) => (s.groupIds || []).map((id) => state.groups.find(
 export const monthlyFee = (s) => groupsOf(s).reduce((a, g) => a + g.price, 0);
 export const thisMonth = () => today().slice(0, 7);
 
-/** paid | due | overdue | inactive — this month's payment state for an athlete. */
+/** paid | pending | due | overdue | inactive — this month's payment state for an athlete. */
 export function paymentStatus(s, month = thisMonth()) {
   if (s.status !== "active") return "inactive";
-  const inv = state.invoices.filter((i) => i.studentId === s.id && i.date.startsWith(month) && i.monthly);
-  if (inv.length && inv.every((i) => i.status === "paid")) return "paid";
+  const mine = state.invoices.filter((i) => i.studentId === s.id && i.date.startsWith(month));
+  const inv = mine.filter((i) => i.monthly);
+  if (inv.length && inv.every((i) => i.status !== "due")) return inv.some((i) => i.status === "pending") ? "pending" : "paid";
   // Invoices created from plans count too (but not event charges).
-  if (!inv.length && state.invoices.some((i) => i.studentId === s.id && i.date.startsWith(month) && i.status === "paid" && state.plans.some((p) => p.name === i.description))) return "paid";
+  if (!inv.length) {
+    const plan = mine.filter((i) => state.plans.some((p) => p.name === i.description));
+    if (plan.some((i) => i.status === "paid")) return "paid";
+    if (plan.some((i) => i.status === "pending")) return "pending";
+  }
   return new Date().getDate() <= (state.academy.graceDay || 7) ? "due" : "overdue";
 }
 
-/** Records this month's payment for an athlete's program(s): pays any open monthly invoices, or creates a paid one. */
-export function markPaid(studentId, groupIds) {
+/** Records this month's payment for an athlete's program(s): settles open (due or pending) monthly invoices, or creates a paid one. */
+export function markPaid(studentId, groupIds, { via = "cash" } = {}) {
   update((d) => {
     const s = d.students.find((x) => x.id === studentId);
     const month = thisMonth();
-    const open = d.invoices.filter((i) => i.studentId === s.id && i.date.startsWith(month) && i.monthly && i.status !== "paid");
-    if (open.length) { open.forEach((i) => (i.status = "paid")); return; }
+    const stamp = { status: "paid", paidVia: PAID_VIA.includes(via) ? via : "other", paidAt: new Date().toISOString() };
+    const open = d.invoices.filter((i) => i.studentId === s.id && i.monthly && i.status !== "paid" && i.date.startsWith(month) && (!groupIds || groupIds.includes(i.groupId)));
+    if (open.length) { open.forEach((i) => Object.assign(i, stamp)); return; }
     for (const gid of groupIds || s.groupIds || []) {
       const g = d.groups.find((x) => x.id === gid);
-      if (g) d.invoices.push({ id: uid("inv"), studentId: s.id, amount: g.price, date: today(), due: today(), description: `${g.name} — ${new Date().toLocaleString("en-US", { month: "long" })}`, status: "paid", monthly: true, groupId: g.id });
+      if (g) d.invoices.push({ id: uid("inv"), studentId: s.id, amount: g.price, date: today(), due: today(), description: `${g.name} — ${new Date().toLocaleString("en-US", { month: "long" })}`, monthly: true, groupId: g.id, ...stamp });
     }
   });
 }
+
+// --- invoices & Revolut payments ---------------------------------------------------
+// Flow: invoice "due" -> athlete taps "I have paid" -> "pending" -> Kyri confirms -> "paid" (or rejects -> "due" + note).
+const PAID_VIA = ["revolut", "cash", "bank", "other"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Creates this month's "due" invoice per program for active athletes. Idempotent; mutates `d`, returns true if it added any. */
+function ensureMonthlyIn(d, studentId) {
+  const month = today().slice(0, 7), now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  const dueDay = iso(addDays(first, d.academy.graceDay || 7));
+  let added = false;
+  for (const s of d.students) {
+    if (s.status !== "active" || (studentId && s.id !== studentId)) continue;
+    const mine = d.invoices.filter((i) => i.studentId === s.id && typeof i.date === "string" && i.date.startsWith(month));
+    if (mine.some((i) => i.monthly || d.plans.some((p) => p.name === i.description))) continue;
+    for (const gid of s.groupIds || []) {
+      const g = d.groups.find((x) => x.id === gid);
+      if (!g) continue;
+      d.invoices.push({ id: uid("inv"), studentId: s.id, amount: g.price, date: iso(first), due: dueDay, description: `${g.name} — ${now.toLocaleString("en-US", { month: "long" })}`, status: "due", monthly: true, groupId: g.id });
+      added = true;
+    }
+  }
+  return added;
+}
+export function ensureMonthlyInvoices(studentId) {
+  if (ensureMonthlyIn(state, studentId)) update(() => {}); // already mutated; update() persists + notifies
+}
+
+export const openInvoices = (studentId) =>
+  state.invoices.filter((i) => i.studentId === studentId && (i.status === "due" || i.status === "pending")).sort((a, b) => a.date.localeCompare(b.date));
+export const amountOwed = (studentId) =>
+  state.invoices.filter((i) => i.studentId === studentId && i.status === "due").reduce((a, i) => a + (Number(i.amount) || 0), 0);
+
+/** "KYRI Andreas G Oct": plain ASCII, <= 30 chars, months taken from the invoices being paid. */
+export function paymentReference(studentId, invoices = []) {
+  const s = state.students.find((x) => x.id === studentId);
+  const ascii = (t) => String(t || "").normalize("NFD").replace(/[^A-Za-z0-9 ]/g, "").trim();
+  const months = [...new Set(invoices.map((i) => MONTHS[Number(i.date.slice(5, 7)) - 1]).filter(Boolean))];
+  if (!months.length) months.push(MONTHS[new Date().getMonth()]);
+  const tail = ` ${ascii(s?.last)[0] || ""} ${months.join(" ")}`.replace(/ +/g, " ");
+  return `KYRI ${ascii(s?.first) || "Athlete"}`.slice(0, 30 - tail.length).trimEnd() + tail;
+}
+
+const USERNAME_RE = /^[a-z0-9._-]{3,32}$/i;
+/** Stored username, re-validated; "" if missing or invalid (e.g. tampered localStorage). */
+export const revolutUsername = () => { const u = state.academy.revolut?.username; return typeof u === "string" && USERNAME_RE.test(u) ? u : ""; };
+/** Accepts "kyri", "@kyri", "https://revolut.me/kyri/"; "" clears it. Returns { ok, username, error }. */
+export function setRevolutUsername(input) {
+  const name = String(input ?? "").trim().replace(/^https?:\/\/(www\.)?revolut\.me\//i, "").replace(/^@/, "").split(/[/?#]/)[0];
+  if (name && !USERNAME_RE.test(name)) return { ok: false, username: revolutUsername(), error: "Use 3-32 letters, numbers, dots, dashes or underscores (e.g. @kyri or https://revolut.me/kyri)." };
+  update((d) => { d.academy.revolut = { ...(d.academy.revolut || {}), username: name }; });
+  return { ok: true, username: name, error: "" };
+}
+
+/** UNVERIFIED: the revolut.me amount param is undocumented. Assumed minor units (cents). Change ONLY here after a real test payment. */
+const revolutAmount = (amount) => Math.round(Number(amount) * 100);
+
+/** Payment link on the fixed revolut.me host, or null when no username is set. */
+export function revolutLink(amount, note = "") {
+  const u = revolutUsername();
+  if (!u) return null;
+  return `https://revolut.me/${encodeURIComponent(u)}?amount=${revolutAmount(amount)}&currency=EUR&note=${encodeURIComponent(note)}`;
+}
+
+/** Athlete says they paid: all due invoices become pending. Returns the claimed invoices. */
+export function claimPaid(studentId, via = "revolut") {
+  const claimed = [];
+  update((d) => {
+    const due = d.invoices.filter((i) => i.studentId === studentId && i.status === "due");
+    const reference = paymentReference(studentId, due);
+    const at = new Date().toISOString();
+    for (const i of due) {
+      Object.assign(i, { status: "pending", claimedAt: at, paidVia: PAID_VIA.includes(via) ? via : "other", reference });
+      delete i.rejectedAt; delete i.rejectNote; // rejectCount / lastRejectNote stay as history
+      claimed.push(i);
+    }
+  });
+  return claimed;
+}
+
+/** Kyri confirms the money arrived. */
+export function confirmPayment(invoiceId, via) {
+  let ok = false;
+  update((d) => {
+    const i = d.invoices.find((x) => x.id === invoiceId && x.status !== "paid");
+    if (!i) return;
+    Object.assign(i, { status: "paid", paidAt: new Date().toISOString(), paidVia: via || i.paidVia || "revolut" });
+    ok = true;
+  });
+  return ok;
+}
+
+/** Kyri could not find the payment: back to due, with a note the athlete sees. */
+export function rejectPayment(invoiceId, note = "") {
+  let ok = false;
+  update((d) => {
+    const i = d.invoices.find((x) => x.id === invoiceId && x.status === "pending");
+    if (!i) return;
+    Object.assign(i, { status: "due", rejectedAt: new Date().toISOString(), rejectNote: String(note).trim().slice(0, 200), rejectCount: (i.rejectCount || 0) + 1 });
+    i.lastRejectNote = i.rejectNote;
+    delete i.claimedAt; delete i.paidVia;
+    ok = true;
+  });
+  return ok;
+}
+
+export const pendingPayments = () =>
+  state.invoices.filter((i) => i.status === "pending")
+    .sort((a, b) => (b.claimedAt || "").localeCompare(a.claimedAt || ""))
+    .map((inv) => ({ inv, s: state.students.find((x) => x.id === inv.studentId) }))
+    .filter((x) => x.s);
 
 /** Coach marks an athlete present for a session. */
 export function markAttended(studentId, classId, date = today()) {

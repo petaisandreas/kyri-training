@@ -1,10 +1,10 @@
 // Athlete app: athletes sign in to book PT and conditioning sessions with Kyri, see their training, and pay.
-import { db, update, subscribe, uid, today, iso, addDays, byId, money, classesOn, DAYS, docStatus, isBooked, bookedCount, recordText, isFighter, sessionColor, monthlyRanking, prizeFor, thisMonth, monthName, shiftMonth, referralsOf, fullName } from "./store.js";
+import { db, update, subscribe, uid, today, iso, addDays, byId, money, classesOn, DAYS, docStatus, isBooked, bookedCount, isFighter, sessionColor, monthlyRanking, prizeFor, thisMonth, monthName, shiftMonth, referralsOf, fullName, openInvoices, amountOwed, paymentReference, revolutLink, claimPaid } from "./store.js";
 import { uploadDocument, viewDocument, DOC_LABEL } from "./docs-ui.js";
-import { esc, $, $$, discChips, badge, fmtDate, fmtTime, toast, empty, athleteAvatar, pickPhoto } from "./ui.js";
+import { esc, $, $$, badge, fmtDate, fmtTime, toast, empty, athleteAvatar, pickPhoto } from "./ui.js";
 
 const SESSION = "kyri:member";
-const TABS = [["home", "Home", "⌂"], ["book", "Book", "▦"], ["rank", "Ranking", "★"], ["training", "Training", "◉"], ["pay", "Billing", "€"]];
+const TABS = [["home", "Home", "⌂"], ["book", "Book", "▦"], ["rank", "Ranking", "★"], ["me", "Me", "◉"]];
 let tab = "home";
 let bookFilter = "";
 
@@ -80,51 +80,47 @@ function streakWeeks(sid) {
 const dayLabel = (date) => (date === today() ? "Today" : date === iso(addDays(new Date(), 1)) ? "Tomorrow" : fmtDate(date, { weekday: "long", month: "short", day: "numeric" }));
 const bookingRow = ({ b, c }) => `<div class="m-card m-class" style="--lv:${sessionColor(c)}"><div class="date-tile"><b>${new Date(b.date + "T12:00").getDate()}</b>${DAYS[new Date(b.date + "T12:00").getDay()]}</div>
   <div class="grow"><b>${esc(c.name)}</b><small>${fmtTime(c.start)} · ${c.duration} min · ${esc(c.level)}</small></div>
-  <button class="btn btn-sm btn-ghost" data-cancel="${b.id}">Cancel</button></div>`;
+  <button class="btn btn-sm btn-ghost" data-cancel="${esc(b.id)}">Cancel</button></div>`;
 
 // --- tabs -----------------------------------------------------------------------
+const sum = (list) => list.reduce((a, i) => a + i.amount, 0);
+function payCard(s) {
+  const open = openInvoices(s.id), due = open.filter((i) => i.status === "due"), pend = open.filter((i) => i.status === "pending");
+  const owed = amountOwed(s.id), rejected = due.find((i) => i.rejectedAt);
+  const pendCard = pend.length ? `<div class="m-card m-pay pending"><b>Waiting for Kyri to confirm ${money(sum(pend))}</b><small>You said you paid${pend[0].reference ? ` · ref ${esc(pend[0].reference)}` : ""}. Kyri will confirm it soon.</small></div>` : "";
+  if (!due.length) return pendCard;
+  const ref = paymentReference(s.id, due), link = revolutLink(owed, ref);
+  return pendCard + `<div class="m-card m-pay">
+    ${rejected ? `<p class="m-pay-reject"><b>Kyri couldn't find your payment${rejected.rejectNote ? `: ${esc(rejected.rejectNote)}` : "."}</b></p>` : ""}
+    <span class="eyebrow">Payment due</span><div class="m-pay-amt">You owe ${money(owed)}</div>
+    <ul class="m-pay-lines">${due.map((i) => `<li><span>${esc(i.description)}<small>Due ${fmtDate(i.due)}</small></span><b>${money(i.amount)}</b></li>`).join("")}</ul>
+    ${link ? `<div class="m-pay-ref"><small>Payment reference</small><div><code>${esc(ref)}</code><button class="btn btn-sm btn-ghost" data-copy="${esc(ref)}">Copy</button></div></div>
+      <a class="btn btn-primary btn-lg full" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Pay with Revolut</a>
+      <button class="btn btn-ghost full mt" data-claim>I've paid</button>` : `<p class="m-pay-offline"><b>Pay Kyri in person</b><small>Cash or bank transfer at your next session.</small></p>`}
+  </div>`;
+}
+
 function home(s) {
-  const d = db();
   const mine = myBookings(s);
-  const month = today().slice(0, 7);
-  const thisMonth = d.attendance.filter((a) => a.studentId === s.id && a.date.startsWith(month)).length;
-  const owed = d.invoices.filter((i) => i.studentId === s.id && i.status !== "paid");
-  const evs = d.events.filter((ev) => ev.date >= today()).sort((a, b) => a.date.localeCompare(b.date));
   const h = docStatus(s.id);
   return `
   <section class="m-hero">
     <div class="m-hero-top"><div><p class="eyebrow">Let's work,</p><h1>${esc(s.first)}</h1></div>
       <button class="photo-edit m-photo" data-photo title="Change photo">${athleteAvatar(s)}<span>${s.photo ? "Change" : "+ Photo"}</span></button></div>
-    ${s.disciplines.length ? `<div class="m-discs">${discChips(s.disciplines, { max: 9 })}</div>` : `<p class="m-goal">${esc(s.goal || "")}</p>`}
-    <div class="m-profile">
-      <div><small>Type</small><b>${esc(s.level)}</b></div>
-      ${isFighter(s) || s.record?.w || s.record?.l ? `<div><small>Record</small><b class="record">${recordText(s)}</b></div>` : ""}
-      ${s.weightClass && s.weightClass !== "—" ? `<div><small>Weight</small><b>${esc(s.weightClass)}</b></div>` : `<div><small>Goal</small><b>${esc(s.goal || "—")}</b></div>`}
-    </div>
   </section>
-  ${owed.length ? `<button class="m-alert" data-go="pay"><b>${owed.length} unpaid invoice${owed.length > 1 ? "s" : ""}</b><span>${money(owed.reduce((a, i) => a + i.amount, 0))} · Tap to pay</span></button>` : ""}
-  ${h.status === "valid" ? "" : `<button class="m-alert ${h.status === "expiring" ? "warn" : ""}" data-upload-hc><b>Medical clearance ${DOC_LABEL[h.status].toLowerCase()}</b><span>${h.doc?.expires ? (h.status === "expired" ? "Expired " : "Expires ") + fmtDate(h.doc.expires) + " · " : ""}Tap to upload a new one</span></button>`}
-  ${s.waiver ? "" : `<div class="m-alert warn"><b>Waiver needed</b><span>Please sign it before your next session.</span></div>`}
+  ${payCard(s)}
+  <div class="m-title-row"><h2 class="m-title">Your bookings</h2><button class="link" data-go="book">+ Book</button></div>
+  ${mine.length ? mine.slice(0, 3).map(bookingRow).join("") : `<button class="m-card m-empty" data-go="book">Nothing booked — <b>book a session →</b></button>`}
   ${(() => { const rows = monthlyRanking(), me = rows.find((r) => r.s.id === s.id); return `<button class="m-card m-rank-teaser" data-go="rank"><span class="m-rank-big">${me ? "#" + me.rank : "—"}</span>
     <span class="grow"><b>${me ? `${me.points} pts this month` : "Start earning points"}</b><small>🎁 #1 wins: ${esc(prizeFor(today().slice(0, 7)))}</small></span><span class="muted">›</span></button>`; })()}
-  <div class="m-stats">
-    <div><strong>${thisMonth}</strong><span>sessions this month</span></div>
-    <div><strong>${streakWeeks(s.id)}</strong><span>week streak</span></div>
-    <div><strong>${mine.length}</strong><span>booked ahead</span></div>
-  </div>
-  <div class="m-title-row"><h2 class="m-title">Your bookings</h2><button class="link" data-go="book">+ Book</button></div>
-  ${mine.length ? mine.slice(0, 4).map(bookingRow).join("") : `<button class="m-card m-empty" data-go="book">Nothing booked — <b>book a session →</b></button>`}
-  ${evs.length ? `<h2 class="m-title">Fights & events</h2>${evs.map((ev) => {
-    const reg = ev.registrations.includes(s.id), full = ev.registrations.length >= ev.capacity;
-    return `<div class="m-card m-class"><div class="date-tile"><b>${new Date(ev.date + "T12:00").getDate()}</b>${new Date(ev.date + "T12:00").toLocaleString("en-US", { month: "short" })}</div>
-      <div class="grow"><b>${esc(ev.title)}</b><small>${esc(ev.type)} · ${ev.price ? money(ev.price) : "Free"} · ${ev.capacity - ev.registrations.length} spots left</small></div>
-      ${reg ? `<button class="btn btn-sm btn-ghost" data-unreg="${ev.id}">Going ✓</button>` : `<button class="btn btn-sm btn-primary" data-reg="${ev.id}" ${full ? "disabled" : ""}>${full ? "Full" : "Join"}</button>`}</div>`;
-  }).join("")}` : ""}`;
+  ${h.status === "valid" ? "" : `<button class="m-alert ${h.status === "expiring" ? "warn" : ""}" data-upload-hc><b>Medical clearance ${DOC_LABEL[h.status].toLowerCase()}</b><span>${h.doc?.expires ? (h.status === "expired" ? "Expired " : "Expires ") + fmtDate(h.doc.expires) + " · " : ""}Tap to upload a new one</span></button>`}
+  ${s.waiver ? "" : `<div class="m-alert warn"><b>Waiver needed</b><span>Please sign it before your next session.</span></div>`}`;
 }
 
 function book(s) {
   const all = upcoming(7);
   const list = all.filter(({ c }) => !bookFilter || (bookFilter === "1-on-1" ? c.capacity === 1 : c.capacity > 1));
+  const evs = db().events.filter((ev) => ev.date >= today()).sort((a, b) => a.date.localeCompare(b.date));
   const byDate = {};
   list.forEach((x) => (byDate[x.date] ||= []).push(x));
   return `<h1 class="m-h1">Book a session</h1><p class="muted">Next 7 days · 1-on-1 slots are just you and the coach</p>
@@ -136,8 +132,14 @@ function book(s) {
       const spots = c.capacity === 1 ? (booked ? "Your 1-on-1 slot" : full ? "Taken" : "Available") : `${c.capacity - n} of ${c.capacity} spots left`;
       return `<div class="m-card m-class m-slot ${c.capacity === 1 ? "solo" : ""}" style="--lv:${sessionColor(c)}"><span class="time">${fmtTime(c.start)}</span>
         <div class="grow"><b>${esc(c.name)}</b><small>${esc(c.level)} · ${c.duration} min</small><small>${spots}</small></div>
-        ${booked ? `<button class="btn btn-sm m-booked" data-unbook="${c.id}|${date}">Booked ✓</button>` : `<button class="btn btn-sm btn-primary" data-book="${c.id}|${date}" ${full ? "disabled" : ""}>${full ? (c.capacity === 1 ? "Taken" : "Full") : "Book"}</button>`}</div>`;
-    }).join("")}`).join("") : empty("No sessions match in the next 7 days.")}`;
+        ${booked ? `<button class="btn btn-sm m-booked" data-unbook="${esc(c.id)}|${esc(date)}">Booked ✓</button>` : `<button class="btn btn-sm btn-primary" data-book="${esc(c.id)}|${esc(date)}" ${full ? "disabled" : ""}>${full ? (c.capacity === 1 ? "Taken" : "Full") : "Book"}</button>`}</div>`;
+    }).join("")}`).join("") : empty("No sessions match in the next 7 days.")}
+  ${evs.length ? `<h2 class="m-title">Fights & events</h2>${evs.map((ev) => {
+    const reg = ev.registrations.includes(s.id), full = ev.registrations.length >= ev.capacity;
+    return `<div class="m-card m-class"><div class="date-tile"><b>${new Date(ev.date + "T12:00").getDate()}</b>${new Date(ev.date + "T12:00").toLocaleString("en-US", { month: "short" })}</div>
+      <div class="grow"><b>${esc(ev.title)}</b><small>${esc(ev.type)} · ${ev.price ? money(ev.price) : "Free"} · ${ev.capacity - ev.registrations.length} spots left</small></div>
+      ${reg ? `<button class="btn btn-sm btn-ghost" data-unreg="${esc(ev.id)}">Going ✓</button>` : `<button class="btn btn-sm btn-primary" data-reg="${esc(ev.id)}" ${full ? "disabled" : ""}>${full ? "Full" : "Join"}</button>`}</div>`;
+  }).join("")}` : ""}`;
 }
 
 function rank(s) {
@@ -152,92 +154,68 @@ function rank(s) {
   const friends = referralsOf(s.id);
   const lastDay = new Date(Number(month.slice(0, 4)), Number(month.slice(5)), 0).getDate();
   return `<h1 class="m-h1">${esc(monthName(month))} ranking</h1><p class="muted">Ends ${esc(monthName(month))} ${lastDay} · #1 wins Kyri's prize</p>
-  <div class="m-card m-prize"><span>🎁</span><div><small>This month's prize</small><b>${esc(prizeFor(month))}</b></div></div>
   <div class="m-card m-me-rank">
     <div class="m-rank-big">${me ? "#" + me.rank : "—"}</div>
     <div class="grow"><b>${me ? `${me.points} points` : "No points yet"}</b><small>${me ? (me.rank === 1 ? "You're in first place. Keep it up!" : `${ahead.points - me.points + 1} pts to pass ${esc(ahead.s.first)}`) : "Book a session to get on the board"}</small></div>
   </div>
-  ${me ? `<div class="m-breakdown">
-    <div><strong>${me.pt}</strong><span>1-on-1 PT<br/>+${me.pt * R.pt}</span></div>
-    <div><strong>${me.group}</strong><span>group<br/>+${me.group * R.group}</span></div>
-    <div><strong>${me.ach.length}</strong><span>achievements<br/>+${me.achPts}</span></div>
-    <div><strong>${me.refs.length}</strong><span>friends<br/>+${me.refs.length * R.referral}</span></div>
-  </div>` : ""}
-  <h2 class="m-title">Leaderboard</h2>
-  <div class="m-card flush"><ul class="list m-list m-board">${rows.slice(0, 10).map((r) => `<li class="row ${r.s.id === s.id ? "me" : ""}"><span class="rank-no r${r.rank}">${r.rank}</span>${athleteAvatar(r.s)}<span class="grow">${esc(r.s.id === s.id ? "You" : `${r.s.first} ${r.s.last[0] || ""}.`)}<small>${r.pt} PT · ${r.ach.length} 🏅 · ${r.refs.length} 👥</small></span><b>${r.points}</b></li>`).join("") || `<li class="row muted">Nobody has points yet. Be the first!</li>`}
-    ${me && me.rank > 10 ? `<li class="row me"><span class="rank-no">${me.rank}</span>${athleteAvatar(s)}<span class="grow">You</span><b>${me.points}</b></li>` : ""}</ul></div>
+  <div class="m-card m-prize"><span>🎁</span><div><small>This month's prize</small><b>${esc(prizeFor(month))}</b></div></div>
   <h2 class="m-title">Bring a friend · +${R.referral} pts</h2>
   <div class="m-card m-invite">
     <p>Share your link. When a friend signs up with Kyri, you get <b>+${R.referral} points</b>.</p>
-    <input readonly value="${esc(link)}" data-link />
+    <input readonly value="${esc(link)}" data-link aria-label="Your invite link" />
     <button class="btn btn-primary full" data-share>Share my invite link</button>
     ${friends.length ? `<small class="muted">Friends you've brought: ${friends.map((f) => esc(f.first)).join(", ")}</small>` : ""}
   </div>
-  <h2 class="m-title">How to earn points</h2>
-  <div class="m-card flush"><ul class="list m-list">
-    <li class="row"><span class="grow">1-on-1 PT session</span><b>+${R.pt}</b></li>
-    <li class="row"><span class="grow">Group session</span><b>+${R.group}</b></li>
-    <li class="row"><span class="grow">Friend who signs up</span><b>+${R.referral}</b></li>
-    ${d.academy.achievementTypes.map((t) => `<li class="row"><span class="grow">🏅 ${esc(t.title)}</span><b>+${t.points}</b></li>`).join("")}
-  </ul></div>
+  <h2 class="m-title">Leaderboard</h2>
+  <div class="m-card flush"><ul class="list m-list m-board">${rows.slice(0, 10).map((r) => `<li class="row ${r.s.id === s.id ? "me" : ""}"><span class="rank-no r${r.rank}">${r.rank}</span>${athleteAvatar(r.s)}<span class="grow">${esc(r.s.id === s.id ? "You" : `${r.s.first} ${r.s.last[0] || ""}.`)}<small>${r.pt} PT · ${r.ach.length} 🏅 · ${r.refs.length} 👥</small></span><b>${r.points}</b></li>`).join("") || `<li class="row muted">Nobody has points yet. Be the first!</li>`}
+    ${me && me.rank > 10 ? `<li class="row me"><span class="rank-no">${me.rank}</span>${athleteAvatar(s)}<span class="grow">You</span><b>${me.points}</b></li>` : ""}</ul></div>
+  <details class="m-card m-how"><summary>How points work</summary>
+    ${me ? `<div class="m-breakdown">
+      <div><strong>${me.pt}</strong><span>1-on-1 PT<br/>+${me.pt * R.pt}</span></div>
+      <div><strong>${me.group}</strong><span>group<br/>+${me.group * R.group}</span></div>
+      <div><strong>${me.ach.length}</strong><span>achievements<br/>+${me.achPts}</span></div>
+      <div><strong>${me.refs.length}</strong><span>friends<br/>+${me.refs.length * R.referral}</span></div>
+    </div>` : ""}
+    <ul class="list m-list">
+      <li class="row"><span class="grow">1-on-1 PT session</span><b>+${R.pt}</b></li>
+      <li class="row"><span class="grow">Group session</span><b>+${R.group}</b></li>
+      <li class="row"><span class="grow">Friend who signs up</span><b>+${R.referral}</b></li>
+      ${d.academy.achievementTypes.map((t) => `<li class="row"><span class="grow">🏅 ${esc(t.title)}</span><b>+${t.points}</b></li>`).join("")}
+    </ul></details>
   ${last ? `<p class="muted small center">Last month's winner: <b>${esc(fullName(last.s))}</b> · ${last.points} pts</p>` : ""}`;
 }
 const inviteLink = (s) => new URL(`index.html?ref=${encodeURIComponent(s.id)}#trial`, location.href).href;
 
-function training(s) {
-  const d = db();
-  const hist = d.attendance.filter((a) => a.studentId === s.id).sort((a, b) => b.date.localeCompare(a.date));
-  const weeks = Array.from({ length: 16 }, (_, w) => {
-    const end = addDays(new Date(), -w * 7), start = addDays(end, -7);
-    return hist.filter((a) => a.date > iso(start) && a.date <= iso(end)).length;
-  }).reverse();
-  const byArt = {};
-  hist.forEach((a) => { const c = byId("classes", a.classId); const k = c?.level || "Other"; byArt[k] = (byArt[k] || 0) + 1; });
-  return `<h1 class="m-h1">My training</h1>
-  <div class="m-card">
-    <span class="eyebrow">My goal</span>
-    <p class="big">${esc(s.goal || "—")}</p>
-    ${s.disciplines.length ? `<div class="m-discs">${discChips(s.disciplines, { max: 9 })}</div>` : ""}
-    <dl class="dl"><dt>Type</dt><dd>${esc(s.level)}</dd>${s.disciplines.length ? `<dt>Weight class</dt><dd>${esc(s.weightClass || "—")}</dd><dt>Fight record</dt><dd>${s.record?.w || s.record?.l ? `<span class="record"><b>${s.record.w}W</b> · <i>${s.record.l}L</i>${s.record.d ? ` · ${s.record.d}D` : ""}</span>` : "No fights yet"}</dd>` : ""}</dl>
-  </div>
-  <h2 class="m-title">Last 16 weeks</h2>
-  <div class="m-card"><div class="heat m-heat">${weeks.map((n) => `<span title="${n} sessions" style="--l:${Math.min(1, n / 4)}"></span>`).join("")}</div>
-    <small class="muted">Each square is a week. Brighter = more sessions.</small></div>
-  ${Object.keys(byArt).length ? `<h2 class="m-title">Sessions by type</h2><div class="m-card flush"><ul class="list m-list">${Object.entries(byArt).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<li class="row"><span class="grow">${esc(k)}</span><b>${n}</b></li>`).join("")}</ul></div>` : ""}
-  <h2 class="m-title">My documents</h2>
-  <div class="m-card flush"><ul class="list m-list">${d.documents.filter((x) => x.studentId === s.id).map((x) => `<li class="row"><button class="row-link" data-doc="${x.id}"><span class="grow">${esc(x.type)}<small>${x.expires ? (x.expires < today() ? "Expired " : "Valid until ") + fmtDate(x.expires) : "No expiry"}</small></span><span class="muted">View</span></button></li>`).join("") || `<li class="row muted">No documents on file</li>`}</ul></div>
-  <button class="btn btn-ghost full" data-upload-doc>+ Upload a document</button>
-  <button class="btn btn-ghost full mt" data-photo>${s.photo ? "Change my photo" : "+ Add my photo"}</button>
-  <h2 class="m-title">Recent sessions</h2>
-  ${hist.length ? `<div class="m-card flush"><ul class="list m-list">${hist.slice(0, 12).map((a) => `<li class="row"><span class="grow">${esc(byId("classes", a.classId)?.name || "Session")}</span><small class="muted">${fmtDate(a.date, { month: "short", day: "numeric" })}</small></li>`).join("")}</ul></div>` : empty("No sessions yet — book your first one!")}`;
-}
-
-function pay(s) {
+function meTab(s) {
   const d = db();
   const plan = byId("plans", s.planId);
-  const inv = d.invoices.filter((i) => i.studentId === s.id).sort((a, b) => b.date.localeCompare(a.date));
-  const owed = inv.filter((i) => i.status !== "paid");
-  return `<h1 class="m-h1">Billing</h1>
-  <div class="m-card m-plan"><span class="eyebrow">Your plan</span><b>${esc(plan?.name || "No plan")}</b>
-    <span>${plan ? `${money(plan.price)} / ${plan.interval === "pack" ? "pack" : plan.interval}` : ""}</span>${badge(s.status, s.status === "active" ? "ok" : "info")}</div>
-  ${owed.length ? `<h2 class="m-title">Due now</h2>${owed.map((i) => `<div class="m-card m-class"><div class="grow"><b>${esc(i.description)}</b><small>Due ${fmtDate(i.due)}${i.status === "failed" ? " · last payment failed" : ""}</small></div>
-    <b>${money(i.amount)}</b><button class="btn btn-sm btn-primary" data-pay="${i.id}">Pay</button></div>`).join("")}` : `<div class="m-card m-ok">✓ You're all paid up</div>`}
-  <h2 class="m-title">History</h2>
-  <div class="m-card flush"><ul class="list m-list">${inv.filter((i) => i.status === "paid").slice(0, 12).map((i) => `<li class="row"><span class="grow">${esc(i.description)}<small>${fmtDate(i.date)}</small></span><b>${money(i.amount)}</b></li>`).join("") || `<li class="row muted">No payments yet</li>`}</ul></div>`;
+  const hist = d.attendance.filter((a) => a.studentId === s.id).sort((a, b) => b.date.localeCompare(a.date));
+  const inv = d.invoices.filter((i) => i.studentId === s.id && (i.status === "paid" || i.status === "pending")).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+  return `<div class="m-me-head"><button class="photo-edit m-photo m-photo-big" data-photo title="Change photo">${athleteAvatar(s)}<span>${s.photo ? "Change" : "+ Photo"}</span></button>
+    <h1 class="m-h1">${esc(s.first)} ${esc(s.last)}</h1>
+    <p class="muted">${esc(plan ? `${plan.name} · ${money(plan.price)} / ${plan.interval === "pack" ? "pack" : plan.interval}` : "No plan")}</p></div>
+  <h2 class="m-title">Payments</h2>
+  <div class="m-card flush"><ul class="list m-list">${inv.map((i) => `<li class="row"><span class="grow">${esc(i.description)}<small>${fmtDate(i.date)}</small></span>${i.status === "pending" ? badge("Awaiting Kyri", "info") : ""}<b>${money(i.amount)}</b></li>`).join("") || `<li class="row muted">No payments yet</li>`}</ul></div>
+  <h2 class="m-title">My documents</h2>
+  <div class="m-card flush"><ul class="list m-list">${d.documents.filter((x) => x.studentId === s.id).map((x) => `<li class="row"><button class="row-link" data-doc="${esc(x.id)}"><span class="grow">${esc(x.type)}<small>${x.expires ? (x.expires < today() ? "Expired " : "Valid until ") + fmtDate(x.expires) : "No expiry"}</small></span><span class="muted">View</span></button></li>`).join("") || `<li class="row muted">No documents on file</li>`}</ul></div>
+  <button class="btn btn-ghost full" data-upload-doc>+ Upload a document</button>
+  <h2 class="m-title">Recent sessions</h2>
+  ${hist.length ? `<div class="m-card flush"><ul class="list m-list">${hist.slice(0, 5).map((a) => `<li class="row"><span class="grow">${esc(byId("classes", a.classId)?.name || "Session")}</span><small class="muted">${fmtDate(a.date, { month: "short", day: "numeric" })}</small></li>`).join("")}</ul></div>` : empty("No sessions yet — book your first one!")}
+  <button class="btn btn-ghost full mt" data-signout>Sign out</button>`;
 }
 
 // --- shell ----------------------------------------------------------------------
 function render() {
   const s = me();
   if (!s) { setSession(null); root.innerHTML = login(); mountLogin(); document.title = "Sign in · KYRI"; return; }
-  const body = { home, book, rank, training, pay }[tab](s);
-  const owed = db().invoices.filter((i) => i.studentId === s.id && i.status !== "paid").length;
+  const body = { home, book, rank, me: meTab }[tab](s);
+  const owed = amountOwed(s.id) > 0;
   const scroll = window.scrollY;
   root.innerHTML = `
     <header class="m-top"><div class="brand">${logo(26)}<span>KYRI</span></div>
-      <button class="m-me" data-menu aria-label="Account">${athleteAvatar(s)}</button></header>
+      <button class="m-me" data-menu aria-label="Me">${athleteAvatar(s)}</button></header>
     <main class="m-main">${body}</main>
-    <nav class="m-tabs">${TABS.map(([k, l, i]) => `<button data-tab="${k}" class="${tab === k ? "on" : ""}"><span>${i}${k === "pay" && owed ? `<i class="m-dot"></i>` : ""}</span>${l}</button>`).join("")}</nav>`;
+    <nav class="m-tabs">${TABS.map(([k, l, i]) => `<button data-tab="${k}" class="${tab === k ? "on" : ""}"><span>${i}${k === "home" && owed ? `<i class="m-dot"></i>` : ""}</span>${l}</button>`).join("")}</nav>`;
   document.title = `${TABS.find((t) => t[0] === tab)[1]} · KYRI`;
   window.scrollTo(0, scroll);
   mount(s);
@@ -248,7 +226,8 @@ function mount(s) {
   on("[data-tab]", (b) => { tab = b.dataset.tab; render(); window.scrollTo(0, 0); });
   on("[data-go]", (b) => { tab = b.dataset.go; render(); window.scrollTo(0, 0); });
   on("[data-bf]", (b) => { bookFilter = b.dataset.bf; render(); });
-  on("[data-menu]", () => { if (confirm(`Signed in as ${s.first} ${s.last}.\n\nSign out?`)) { setSession(null); render(); } });
+  on("[data-menu]", () => { tab = "me"; render(); window.scrollTo(0, 0); });
+  on("[data-signout]", () => { setSession(null); tab = "home"; render(); });
   on("[data-book]", (b) => {
     const [classId, date] = b.dataset.book.split("|");
     const c = byId("classes", classId);
@@ -266,7 +245,7 @@ function mount(s) {
     const ev = d.events.find((x) => x.id === b.dataset.reg);
     if (ev.registrations.length >= ev.capacity || ev.registrations.includes(s.id)) return;
     ev.registrations.push(s.id);
-    if (ev.price > 0) d.invoices.push({ id: uid("inv"), studentId: s.id, amount: ev.price, date: today(), due: ev.date, description: ev.title, status: "due" });
+    if (ev.price > 0) d.invoices.push({ id: uid("inv"), studentId: s.id, amount: ev.price, date: today(), due: ev.date, description: ev.title, eventId: ev.id, status: "due" });
     toast(`You're in: ${ev.title}`);
   }));
   on("[data-unreg]", (b) => {
@@ -274,15 +253,18 @@ function mount(s) {
     update((d) => {
       const ev = d.events.find((x) => x.id === b.dataset.unreg);
       ev.registrations = ev.registrations.filter((id) => id !== s.id);
-      d.invoices = d.invoices.filter((i) => !(i.studentId === s.id && i.description === ev.title && i.status !== "paid"));
+      d.invoices = d.invoices.filter((i) => !(i.studentId === s.id && i.status === "due" && (i.eventId ? i.eventId === ev.id : i.description === ev.title)));
     });
   });
-  on("[data-pay]", (b) => {
-    const i = db().invoices.find((x) => x.id === b.dataset.pay);
-    // Demo only: a production build would hand off to a payment provider here.
-    if (!confirm(`Pay ${money(i.amount)} for "${i.description}" with the card on file?\n\n(Demo — no real charge.)`)) return;
-    update((d) => (d.invoices.find((x) => x.id === i.id).status = "paid"));
-    toast("Payment received — thank you!");
+  on("[data-copy]", async (b) => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); toast("Reference copied"); }
+    catch { toast("Copy it by hand: " + b.dataset.copy, "warn"); }
+  });
+  on("[data-claim]", () => {
+    const owed = amountOwed(s.id);
+    if (!owed || !confirm(`Confirm you've sent ${money(owed)} to Kyri on Revolut?\n\nKyri will check and confirm it.`)) return;
+    claimPaid(s.id, "revolut");
+    toast("Thanks! Waiting for Kyri to confirm");
   });
   on("[data-share]", async () => {
     const url = inviteLink(s);

@@ -364,3 +364,8 @@ input[type="search"].input { min-width: 220px; }
 .kpis-4-sm { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .ref-tag { color: var(--ok) !important; font-weight: 600; }
 @media (max-width: 860px) { .kpis-4-sm { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pod .avatar { width: 52px; height: 52px; } .pod-1 .avatar { width: 66px; height: 66px; } .pod-rank { top: 40px; } .pod-1 .pod-rank { top: 54px; } }
+
+/* Revolut payments */
+.paybar .info { background: var(--info); } .paylegend .info { background: var(--info); }
+#rev-err { color: var(--danger); margin: 6px 0 0; }
+.list .row .btn + .btn { margin-left: 6px; }
